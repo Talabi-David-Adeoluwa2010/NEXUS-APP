@@ -24,7 +24,7 @@ class NexusLearnUnifiedApp:
     def __init__(self, root):
         self.root = root
         self.root.title("NexusLearn // Unified Learning Environment")
-        self.root.geometry("1200x780")
+        self.root.geometry("1250x820")
         self.root.configure(bg="#0B132B")
         
         # State tracking matrices
@@ -40,6 +40,10 @@ class NexusLearnUnifiedApp:
         self.is_video_blocked = False
         self.student_mute_states = {}
         self.current_playing_track = ""
+        
+        # AV Live Engine Hooks
+        self.local_cam_on = True
+        self.local_mic_on = True
         
         self.init_shared_database()
         self.ensure_json_notes_exists()
@@ -86,7 +90,7 @@ class NexusLearnUnifiedApp:
         self.student_name = data.get("username")
         if hasattr(self, 'load_frame') and self.load_frame.winfo_exists(): self.load_frame.destroy()
         if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
-        self.run_teacher_10s_transition()
+        self.build_teacher_home_hub()
         self.confirm_handshake_to_cloud(self.student_name)
 
     def handle_web_student_auth(self, data):
@@ -132,7 +136,7 @@ class NexusLearnUnifiedApp:
                 requests.post(f"https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_broadcast_{self.active_session_pin}", json=payload, timeout=3)
             except Exception:
                 pass
-        threading.Thread(target=task, daemon=True).start()
+        threading.Thread(task, daemon=True).start()
 
     def register_live_student_node(self, name, status="Node Hook Established", grade="No Evaluation Records"):
         if hasattr(self, 't_roster'):
@@ -158,11 +162,7 @@ class NexusLearnUnifiedApp:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS chat_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT,
-                sender TEXT,
-                recipient TEXT,
-                message TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                session_id TEXT, sender TEXT, recipient TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
         self.conn.commit()
@@ -187,7 +187,7 @@ class NexusLearnUnifiedApp:
 
     def simulate_fast_boot(self):
         for i in range(1, 101):
-            time.sleep(0.01)
+            time.sleep(0.005)
             self.root.after(0, self.update_progress, i)
         self.root.after(0, self.load_role_selection_gateway)
 
@@ -203,7 +203,6 @@ class NexusLearnUnifiedApp:
         self.gateway_frame.pack(expand=True)
         
         tk.Label(self.gateway_frame, text="Welcome to NexusLearn", font=("Helvetica", 22, "bold"), bg="#0B132B", fg="#FFFFFF").pack(pady=20)
-        tk.Label(self.gateway_frame, text="Select your entry mode portal:", font=("Helvetica", 12), bg="#0B132B", fg="#6C757D").pack(pady=5)
         
         btn_teacher = tk.Button(self.gateway_frame, text="[ I am a Teacher ]", command=self.load_teacher_login, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 12, "bold"), width=25, pady=10)
         btn_teacher.pack(pady=10)
@@ -223,14 +222,12 @@ class NexusLearnUnifiedApp:
         tk.Label(self.login_frame, text="Username / Email:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
         self.ent_t_user = tk.Entry(self.login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
         self.ent_t_user.pack(pady=5)
+        self.ent_t_user.insert(0, "Teacher_Node")
         
         tk.Label(self.login_frame, text="Password:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
         self.ent_t_pass = tk.Entry(self.login_frame, show="*", font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
         self.ent_t_pass.pack(pady=5)
-        
-        tk.Label(self.login_frame, text="Admin Authorization PIN:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
-        self.ent_t_pin = tk.Entry(self.login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
-        self.ent_t_pin.pack(pady=5)
+        self.ent_t_pass.insert(0, "Password123")
         
         btn_auth = tk.Button(self.login_frame, text="Authenticate Credentials", command=self.verify_teacher_credentials, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"), width=25)
         btn_auth.pack(pady=20)
@@ -238,45 +235,255 @@ class NexusLearnUnifiedApp:
     def verify_teacher_credentials(self):
         self.student_name = self.ent_t_user.get().strip() or "Educator Node"
         self.login_frame.destroy()
-        self.run_teacher_10s_transition()
+        self.build_teacher_home_hub()
 
-    def run_teacher_10s_transition(self):
-        self.intro_frame = tk.Frame(self.root, bg="#0B132B")
-        self.intro_frame.place(x=0, y=0, relwidth=1, relheight=1)
-        
-        tk.Label(self.intro_frame, text="▲\nNEXUSLEARN", font=("Helvetica", 32, "bold"), bg="#0B132B", fg="#5BC0BE").pack(expand=True)
-        tk.Label(self.intro_frame, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 12, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.BOTTOM, pady=40)
-        
-        threading.Thread(target=self.wait_for_teacher_dashboard, daemon=True).start()
+    def hub_generate_pin(self):
+        self.active_session_pin = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        self.lbl_hub_pin.config(text=f"INVITATION PIN: {self.active_session_pin}")
 
-    def wait_for_teacher_dashboard(self):
-        time.sleep(10)
-        self.root.after(0, self.build_teacher_home_hub)
+    def hub_load_audio_file(self):
+        path = filedialog.askopenfilename(filetypes=[("Audio Files", "*.mp3 *.wav")])
+        if path:
+            self.current_playing_track = os.path.basename(path)
+            self.lbl_music_track.config(text=f"Ready: {self.current_playing_track}", fg="#FFB703")
+
+    def hub_play_audio_mock(self):
+        if self.current_playing_track:
+            self.lbl_music_track.config(text=f"🔊 Playing: {self.current_playing_track}", fg="#5BC0BE")
+        else:
+            self.lbl_music_track.config(text="🔊 Playing: Default Class Ambient.mp3", fg="#5BC0BE")
+
+    def launch_classroom_from_hub(self):
+        self.current_class_name = self.ent_hub_cname.get().strip() or "Live STEM Workspace"
+        if hasattr(self, 'home_hub_frame'):
+            self.home_hub_frame.destroy()
+        self.build_teacher_workspace()
+
+    def build_teacher_workspace(self):
+        self.main_work = tk.Frame(self.root, bg="#0B132B")
+        self.main_work.pack(fill="both", expand=True)
+        
+        # Left Panel Controls
+        ctrl_frame = tk.Frame(self.main_work, bg="#1C2541", width=300)
+        ctrl_frame.pack(side=tk.LEFT, fill="y", padx=10, pady=10)
+        ctrl_frame.pack_propagate(False)
+        
+        tk.Label(ctrl_frame, text=f"Room: {self.current_class_name}", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 12, "bold"), wraplength=280).pack(pady=10)
+        tk.Label(ctrl_frame, text=f"PIN: {self.active_session_pin}", bg="#1C2541", fg="#FFB703", font=("Courier", 12, "bold")).pack(pady=5)
+        
+        # Immediate Camera and Voice Control Handlers
+        self.btn_t_cam = tk.Button(ctrl_frame, text="📷 Close Camera Feed", command=self.toggle_teacher_camera, bg="#0B132B", fg="#FFFFFF", font=("Helvetica", 10))
+        self.btn_t_cam.pack(fill="x", padx=15, pady=6)
+        
+        self.btn_t_mic = tk.Button(ctrl_frame, text="🎤 Mute My Microphone", command=self.toggle_teacher_mic, bg="#0B132B", fg="#FFFFFF", font=("Helvetica", 10))
+        self.btn_t_mic.pack(fill="x", padx=15, pady=6)
+        
+        self.btn_break = tk.Button(ctrl_frame, text="☕ Initiate 10m Break", command=self.trigger_break_state, bg="#FFB703", fg="#0B132B", font=("Helvetica", 11, "bold"))
+        self.btn_break.pack(fill="x", padx=15, pady=15)
+        
+        # Roster view
+        self.t_roster = ttk.Treeview(ctrl_frame, columns=("name", "status", "grade"), show="headings", height=12)
+        self.t_roster.heading("name", text="Student Node")
+        self.t_roster.heading("status", text="Activity Tracker")
+        self.t_roster.heading("grade", text="Marks")
+        self.t_roster.column("name", width=90)
+        self.t_roster.column("status", width=120)
+        self.t_roster.column("grade", width=70)
+        self.t_roster.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Right Feeds Rendering Matrix (Realtime A/V Layout Windows)
+        feed_frame = tk.Frame(self.main_work, bg="#0B132B")
+        feed_frame.pack(side=tk.RIGHT, fill="both", expand=True, padx=10, pady=10)
+        
+        self.box_t_cam = tk.LabelFrame(feed_frame, text="Your Video Frame (Transmitting to Students)", bg="#1C2541", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
+        self.box_t_cam.pack(fill="both", expand=True, pady=5)
+        self.lbl_t_vid_mock = tk.Label(self.box_t_cam, text="[CAMERA MATRIX ACTIVE // BROADCASTING]", bg="#050811", fg="#FFFFFF", font=("Helvetica", 12))
+        self.lbl_t_vid_mock.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Dynamic Sound Waves Display Track Canvas
+        self.wave_canvas = tk.Canvas(feed_frame, height=50, bg="#0B132B", highlightthickness=0)
+        self.wave_canvas.pack(fill="x", pady=5)
+        
+        box_s_cam = tk.LabelFrame(feed_frame, text="Incoming Workspace Grid (Remote Student Nodes View)", bg="#1C2541", fg="#FFB703", font=("Helvetica", 10, "bold"))
+        box_s_cam.pack(fill="both", expand=True, pady=5)
+        self.lbl_s_vid_mock = tk.Label(box_s_cam, text="[Connected Student Cameras Rendering Pipeline]", bg="#050811", fg="#9CA3AF", font=("Helvetica", 11))
+        self.lbl_s_vid_mock.pack(fill="both", expand=True, padx=5, pady=5)
+
+        threading.Thread(target=self.animate_voice_waves, daemon=True).start()
+
+    def toggle_teacher_camera(self):
+        self.local_cam_on = not self.local_cam_on
+        if self.local_cam_on:
+            self.btn_t_cam.config(text="📷 Close Camera Feed", bg="#0B132B")
+            self.lbl_t_vid_mock.config(text="[CAMERA MATRIX ACTIVE // BROADCASTING]", bg="#050811", fg="#FFFFFF")
+        else:
+            self.btn_t_cam.config(text="📷 Open Camera Feed", bg="#E63946")
+            self.lbl_t_vid_mock.config(text="[❌ CAMERA DISCONNECTED // STREAM TERMINATED]", bg="#111827", fg="#6C757D")
+
+    def toggle_teacher_mic(self):
+        self.local_mic_on = not self.local_mic_on
+        if self.local_mic_on:
+            self.btn_t_mic.config(text="🎤 Mute My Microphone", bg="#0B132B")
+        else:
+            self.btn_t_mic.config(text="🎤 Unmute My Microphone", bg="#E63946")
+
+    def animate_voice_waves(self):
+        while True:
+            time.sleep(0.12)
+            if not hasattr(self, 'wave_canvas') or not self.wave_canvas.winfo_exists(): break
+            self.wave_canvas.delete("all")
+            if self.local_mic_on:
+                for x in range(15, 900, 22):
+                    h = random.randint(4, 42)
+                    color = random.choice(["#5BC0BE", "#FFB703", "#FFFFFF"])
+                    self.wave_canvas.create_line(x, 25-h//2, x, 25+h//2, fill=color, width=3)
+            else:
+                self.wave_canvas.create_line(15, 25, 900, 25, fill="#E63946", width=2)
+
+    def trigger_break_state(self):
+        self.is_break_active = True
+        self.push_global_broadcast({"type": "SYSTEM_BREAK", "status": "START"})
+
+    def load_student_login(self):
+        if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists():
+            self.gateway_frame.destroy()
+            
+        self.s_login_frame = tk.Frame(self.root, bg="#0B132B")
+        self.s_login_frame.pack(expand=True)
+        
+        tk.Label(self.s_login_frame, text="Student Connection Gateway", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#5BC0BE").pack(pady=15)
+        
+        tk.Label(self.s_login_frame, text="Your Full Name:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_s_name = tk.Entry(self.s_login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_s_name.pack(pady=5)
+        self.ent_s_name.insert(0, "Student_David")
+        
+        tk.Label(self.s_login_frame, text="Enter Classroom Invitation PIN:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_s_pin = tk.Entry(self.s_login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_s_pin.pack(pady=5)
+        self.ent_s_pin.insert(0, "A1B2C3")
+        
+        btn_s_auth = tk.Button(self.s_login_frame, text="Establish Workspace Connection", command=self.verify_student_entry, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"), width=28)
+        btn_s_auth.pack(pady=20)
+
+    def verify_student_entry(self):
+        self.student_name = self.ent_s_name.get().strip() or "Student Node"
+        self.active_session_pin = self.ent_s_pin.get().strip().upper() or "000000"
+        self.s_login_frame.destroy()
+        self.build_student_workspace()
+
+    def build_student_workspace(self):
+        self.s_work = tk.Frame(self.root, bg="#0B132B")
+        self.s_work.pack(fill="both", expand=True)
+        
+        left_p = tk.Frame(self.s_work, bg="#1C2541", width=280)
+        left_p.pack(side=tk.LEFT, fill="y", padx=10, pady=10)
+        left_p.pack_propagate(False)
+        
+        tk.Label(left_p, text=f"Terminal Matrix: {self.student_name}", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 11, "bold"), wraplength=250).pack(pady=12)
+        
+        self.btn_s_cam = tk.Button(left_p, text="📷 Close My Camera", command=self.toggle_student_camera, bg="#0B132B", fg="#FFFFFF")
+        self.btn_s_cam.pack(fill="x", padx=15, pady=5)
+        
+        self.btn_s_mic = tk.Button(left_p, text="🎤 Mute My Microphone", command=self.toggle_student_mic, bg="#0B132B", fg="#FFFFFF")
+        self.btn_s_mic.pack(fill="x", padx=15, pady=5)
+        
+        # Student Break Deck Panel (Locked until Educator fires break trigger)
+        self.student_music_box = tk.LabelFrame(left_p, text="☕ Break Mode Music Deck", bg="#1C2541", fg="#6C757D", font=("Helvetica", 10, "bold"))
+        self.student_music_box.pack(fill="x", padx=15, pady=25)
+        
+        self.lbl_s_music_status = tk.Label(self.student_music_box, text="🔒 Audio Deck Locked Until Break", bg="#1C2541", fg="#9CA3AF", font=("Helvetica", 9, "italic"), wraplength=220)
+        self.lbl_s_music_status.pack(pady=8)
+        
+        self.btn_s_play = tk.Button(self.student_music_box, text="▶ Stream Rest Music", state=tk.DISABLED, command=self.student_play_break_audio, bg="#0B132B", fg="#FFFFFF")
+        self.btn_s_play.pack(fill="x", padx=10, pady=5)
+        
+        # Right Feeds View Layout Frame
+        right_p = tk.Frame(self.s_work, bg="#0B132B")
+        right_p.pack(side=tk.RIGHT, fill="both", expand=True, padx=10, pady=10)
+        
+        self.box_incoming_t = tk.LabelFrame(right_p, text="Live Classroom Video (Instructor Broadcast View)", bg="#1C2541", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
+        self.box_incoming_t.pack(fill="both", expand=True, pady=5)
+        self.lbl_s_incoming_view = tk.Label(self.box_incoming_t, text="[INSTRUCTOR BROADCAST TRANSMISSION HIGH-DEFINITION STREAM]", bg="#050811", fg="#FFFFFF", font=("Helvetica", 12))
+        self.lbl_s_incoming_view.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        self.s_wave_canvas = tk.Canvas(right_p, height=50, bg="#0B132B", highlightthickness=0)
+        self.s_wave_canvas.pack(fill="x", pady=5)
+
+        threading.Thread(target=self.animate_student_voice_waves, daemon=True).start()
+        threading.Thread(target=self.student_break_monitor_loop, daemon=True).start()
+
+    def toggle_student_camera(self):
+        self.local_cam_on = not self.local_cam_on
+        if self.local_cam_on:
+            self.btn_s_cam.config(text="📷 Close My Camera", bg="#0B132B")
+        else:
+            self.btn_s_cam.config(text="📷 Open My Camera", bg="#E63946")
+
+    def toggle_student_mic(self):
+        self.local_mic_on = not self.local_mic_on
+        if self.local_mic_on:
+            self.btn_s_mic.config(text="🎤 Mute My Microphone", bg="#0B132B")
+        else:
+            self.btn_s_mic.config(text="🎤 Unmute My Microphone", bg="#E63946")
+
+    def student_play_break_audio(self):
+        self.lbl_s_music_status.config(text="🔊 Streaming: Lo-Fi Chill Study Beats.mp3", fg="#5BC0BE")
+
+    def animate_student_voice_waves(self):
+        while True:
+            time.sleep(0.12)
+            if not hasattr(self, 's_wave_canvas') or not self.s_wave_canvas.winfo_exists(): break
+            self.s_wave_canvas.delete("all")
+            if self.local_mic_on:
+                for x in range(15, 850, 20):
+                    h = random.randint(4, 38)
+                    self.s_wave_canvas.create_line(x, 25-h//2, x, 25+h//2, fill="#5BC0BE", width=2)
+            else:
+                self.s_wave_canvas.create_line(15, 25, 850, 25, fill="#E63946", width=2)
+
+    def student_break_monitor_loop(self):
+        while True:
+            time.sleep(3.0)
+            try:
+                res = requests.get(f"https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_broadcast_{self.active_session_pin}", timeout=3)
+                if res.status_code == 200 and res.text.strip():
+                    data = res.json()
+                    if data.get("type") == "SYSTEM_BREAK" and not self.is_break_active:
+                        self.is_break_active = True
+                        self.root.after(0, self.unlock_student_break_deck)
+            except Exception:
+                pass
+
+    def unlock_student_break_deck(self):
+        self.student_music_box.config(text="☕ Break Active: Audio Unlocked", fg="#FFB703")
+        self.lbl_s_music_status.config(text="Break window active. Audio pipeline authorized.", fg="#FFB703")
+        self.btn_s_play.config(state=tk.NORMAL, bg="#FFB703", fg="#0B132B")
 
     def build_teacher_home_hub(self):
-        if hasattr(self, 'intro_frame'): self.intro_frame.destroy()
         if hasattr(self, 'main_work') and self.main_work.winfo_exists(): self.main_work.destroy()
+        if hasattr(self, 'home_hub_frame') and self.home_hub_frame.winfo_exists(): self.home_hub_frame.destroy()
         
         self.home_hub_frame = tk.Frame(self.root, bg="#0B132B")
         self.home_hub_frame.pack(fill="both", expand=True)
         
         tk.Label(self.home_hub_frame, text=f"Welcome Back, {self.student_name} // Hub Management", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#5BC0BE").pack(anchor="w", padx=20, pady=15)
         
-        # Left Panel: Classroom Creation Matrix Setup
         class_frame = tk.LabelFrame(self.home_hub_frame, text="Create Active Classroom Node", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 11, "bold"))
         class_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=15, pady=10)
         
         tk.Label(class_frame, text="Structural Class Title:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=15, pady=5)
         self.ent_hub_cname = tk.Entry(class_frame, font=("Helvetica", 12), bg="#0B132B", fg="#FFFFFF", insertbackground="white")
         self.ent_hub_cname.pack(fill="x", padx=15, pady=5)
+        self.ent_hub_cname.insert(0, "Advanced STEM Lecture")
         
         btn_hub_pin = tk.Button(class_frame, text="Generate Secure Access Key", command=self.hub_generate_pin, bg="#0B132B", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
         btn_hub_pin.pack(pady=5)
         
         self.lbl_hub_pin = tk.Label(class_frame, text="INVITATION PIN: ----", font=("Courier", 13, "bold"), bg="#1C2541", fg="#FFB703")
         self.lbl_hub_pin.pack(pady=5)
+        self.hub_generate_pin()
 
-        # ADDED MUSIC PLAYBACK MATRIX CONTROLS
         music_box = tk.LabelFrame(class_frame, text="Class Audio / Music Player", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 10, "bold"))
         music_box.pack(fill="x", padx=15, pady=10)
         
@@ -286,441 +493,47 @@ class NexusLearnUnifiedApp:
         btn_load_music = tk.Button(music_box, text="Import Audio File (.mp3/.wav)", command=self.hub_load_audio_file, bg="#0B132B", fg="#FFFFFF")
         btn_load_music.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
         
-        btn_play_music = tk.Button(music_box, text="▶ Play", command=self.hub_play_audio_mock, bg="#0B132B", fg="#5BC0BE")
+        btn_play_music = tk.Button(music_box, text="▶ Play Track", command=self.hub_play_audio_mock, bg="#0B132B", fg="#5BC0BE")
         btn_play_music.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        btn_stop_music = tk.Button(music_box, text="⏹ Stop", command=self.hub_stop_audio_mock, bg="#0B132B", fg="#E63946")
-        btn_stop_music.pack(side=tk.LEFT, padx=5, pady=5)
         
         btn_launch_workspace = tk.Button(class_frame, text="Initialize Streaming Environment", command=self.launch_classroom_from_hub, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"))
         class_frame.pack_propagate(False)
         btn_launch_workspace.pack(side=tk.BOTTOM, fill="x", padx=15, pady=15)
         
-        # Right Panel: Notepad and JSON Saving Pipeline
-        tools_frame = tk.LabelFrame(self.home_hub_frame, text="Notepad & Persistent Jottings Storage (.json)", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 11, "bold"))
+        tools_frame = tk.LabelFrame(self.home_hub_frame, text="Notepad & Persistent Storage (.json)", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 11, "bold"))
         tools_frame.pack(side=tk.RIGHT, fill="both", expand=True, padx=15, pady=10)
         
         tk.Label(tools_frame, text="Note Identifier Key:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=10, pady=2)
         self.ent_note_title = tk.Entry(tools_frame, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
         self.ent_note_title.pack(fill="x", padx=10, pady=2)
-        self.ent_note_title.insert(0, "Lecture_Segment_A")
-
-        self.hub_notepad = tk.Text(tools_frame, bg="#0B132B", fg="#FFFFFF", insertbackground="white", font=("Courier", 10))
-        self.hub_notepad.pack(fill="both", expand=True, padx=10, pady=10)
+        self.ent_note_title.insert(0, "Class_Curriculum_Payload")
         
-        json_btn_panel = tk.Frame(tools_frame, bg="#1C2541")
-        json_btn_panel.pack(fill="x", padx=10, pady=5)
+        self.hub_notepad = tk.Text(tools_frame, bg="#0B132B", fg="#FFFFFF", insertbackground="white", height=15)
+        self.hub_notepad.pack(fill="both", expand=True, padx=10, pady=5)
         
-        btn_save_json = tk.Button(json_btn_panel, text="💾 Save to JSON", command=self.hub_save_note_to_json, bg="#0B132B", fg="#5BC0BE")
-        btn_save_json.pack(side=tk.LEFT, fill="x", expand=True, padx=2)
+        btn_row = tk.Frame(tools_frame, bg="#1C2541")
+        btn_row.pack(fill="x", padx=10, pady=10)
         
-        btn_load_json = tk.Button(json_btn_panel, text="📂 Load from JSON", command=self.hub_load_note_from_json, bg="#0B132B", fg="#FFFFFF")
-        btn_load_json.pack(side=tk.LEFT, fill="x", expand=True, padx=2)
-        
-        btn_ocr = tk.Button(tools_frame, text="Import Image Note / Extract Text Vector", command=self.hub_extract_image_text, bg="#0B132B", fg="#FFFFFF")
-        btn_ocr.pack(fill="x", padx=10, pady=5)
+        tk.Button(btn_row, text="💾 Save Index to Disk", command=self.save_notes_json, bg="#0B132B", fg="#5BC0BE").pack(side=tk.LEFT, fill="x", expand=True, padx=2)
+        tk.Button(btn_row, text="📂 Load Index Data", command=self.load_notes_json, bg="#0B132B", fg="#FFFFFF").pack(side=tk.LEFT, fill="x", expand=True, padx=2)
 
-    def hub_generate_pin(self):
-        digits = "".join(random.choices(string.digits, k=4))
-        letters = "".join(random.choices(string.ascii_uppercase, k=2))
-        self.active_session_pin = digits + letters
-        self.lbl_hub_pin.config(text=f"INVITATION PIN: {self.active_session_pin}")
-
-    def hub_load_audio_file(self):
-        path = filedialog.askopenfilename(filetypes=[("Class Audio Track", "*.mp3 *.wav *.ogg")])
-        if path:
-            self.current_playing_track = os.path.basename(path)
-            self.lbl_music_track.config(text=f"Loaded: {self.current_playing_track}", fg="#5BC0BE")
-
-    def hub_play_audio_mock(self):
-        if self.current_playing_track:
-            self.lbl_music_track.config(text=f"🔊 Playing: {self.current_playing_track}", fg="#FFB703")
-
-    def hub_stop_audio_mock(self):
-        if self.current_playing_track:
-            self.lbl_music_track.config(text=f"Loaded: {self.current_playing_track}", fg="#5BC0BE")
-
-    def hub_save_note_to_json(self):
+    def save_notes_json(self):
         title = self.ent_note_title.get().strip() or "Untitled"
-        content = self.hub_notepad.get("1.0", tk.END).strip()
+        body = self.hub_notepad.get("1.0", tk.END).strip()
         try:
-            with open(NOTES_JSON_FILE, "r") as f:
-                data = json.load(f)
-            data[title] = content
-            with open(NOTES_JSON_FILE, "w") as f:
-                json.dump(data, f, indent=4)
-        except Exception:
-            pass
+            with open(NOTES_JSON_FILE, "r") as f: data = json.load(f)
+            data[title] = body
+            with open(NOTES_JSON_FILE, "w") as f: json.dump(data, f, indent=4)
+        except Exception: pass
 
-    def hub_load_note_from_json(self):
+    def load_notes_json(self):
         title = self.ent_note_title.get().strip()
         try:
-            with open(NOTES_JSON_FILE, "r") as f:
-                data = json.load(f)
+            with open(NOTES_JSON_FILE, "r") as f: data = json.load(f)
             if title in data:
                 self.hub_notepad.delete("1.0", tk.END)
                 self.hub_notepad.insert(tk.END, data[title])
-        except Exception:
-            pass
-
-    def hub_extract_image_text(self):
-        path = filedialog.askopenfilename(filetypes=[("Image Components", "*.png *.jpg *.jpeg")])
-        if path:
-            filename = os.path.basename(path)
-            extracted_words = f"\n\n[Extracted Vectors from Document Frame: {filename}]\nTopic: Advanced Technical Lecture Segment\nContent Module Sample: Unified Sync Node Active Parameters."
-            self.hub_notepad.insert(tk.END, extracted_words)
-
-    def launch_classroom_from_hub(self):
-        self.current_class_name = self.ent_hub_cname.get().strip()
-        if not self.current_class_name or not self.active_session_pin:
-            return
-        self.home_hub_frame.destroy()
-        self.build_teacher_workspace()
-
-    def build_teacher_workspace(self):
-        if hasattr(self, 'intro_frame'): self.intro_frame.destroy()
-        
-        self.main_work = tk.Frame(self.root, bg="#0B132B")
-        self.main_work.pack(fill="both", expand=True)
-        
-        left_p = tk.Frame(self.main_work, bg="#1C2541", width=300)
-        left_p.pack(side=tk.LEFT, fill="y", padx=10, pady=10)
-        left_p.pack_propagate(False)
-        
-        tk.Label(left_p, text="Session Command Panel", font=("Helvetica", 12, "bold"), bg="#1C2541", fg="#5BC0BE").pack(pady=10)
-        
-        tk.Label(left_p, text="Class Assignment Name:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=10)
-        self.ent_cname = tk.Entry(left_p, font=("Helvetica", 11), bg="#0B132B", fg="#FFFFFF", insertbackground="white")
-        self.ent_cname.pack(fill="x", padx=10, pady=5)
-        self.ent_cname.insert(0, self.current_class_name)
-        
-        btn_gen_pin = tk.Button(left_p, text="Generate Invitation Code", command=self.teacher_generate_pin, bg="#0B132B", fg="#5BC0BE")
-        btn_gen_pin.pack(pady=5)
-        
-        self.lbl_t_pin = tk.Label(left_p, text=f"CODE: {self.active_session_pin}", font=("Courier", 14, "bold"), bg="#1C2541", fg="#FFFFFF")
-        self.lbl_t_pin.pack(pady=5)
-        
-        btn_launch = tk.Button(left_p, text="Launch Classroom Live", command=self.teacher_launch_class, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
-        btn_launch.pack(pady=15, fill="x", padx=10)
-        
-        self.btn_t_break = tk.Button(left_p, text="Initiate Break Time (10m)", command=self.teacher_toggle_break, state=tk.DISABLED, bg="#6C757D", fg="#FFFFFF")
-        self.btn_t_break.pack(pady=5, fill="x", padx=10)
-        
-        btn_t_exam = tk.Button(left_p, text="Deploy Assessment Module", command=self.teacher_open_exam, bg="#1C2541", fg="#FFFFFF")
-        btn_t_exam.pack(pady=5, fill="x", padx=10)
-
-        av_box = tk.LabelFrame(left_p, text="Live Classroom AV Matrix Override", bg="#1C2541", fg="#5BC0BE")
-        av_box.pack(fill="x", padx=10, pady=10)
-        
-        self.btn_mute_all = tk.Button(av_box, text="Mute All Students", command=self.toggle_global_student_mute, bg="#0B132B", fg="#FFFFFF")
-        self.btn_mute_all.pack(fill="x", padx=5, pady=4)
-        
-        self.btn_block_cam = tk.Button(av_box, text="Block All Cameras", command=self.toggle_global_student_camera, bg="#0B132B", fg="#FFFFFF")
-        self.btn_block_cam.pack(fill="x", padx=5, pady=4)
-
-        btn_share_file = tk.Button(left_p, text="Broadcast Image/File to Class", command=self.teacher_broadcast_media, bg="#FFB703", fg="#0B132B", font=("Helvetica", 9, "bold"))
-        btn_share_file.pack(fill="x", padx=10, pady=5)
-        
-        tk.Label(left_p, text="Talabi David Adeoluwa", font=("Helvetica", 8, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.BOTTOM, pady=5)
-
-        right_p = tk.Frame(self.main_work, bg="#0B132B")
-        right_p.pack(side=tk.RIGHT, fill="both", expand=True, padx=10, pady=10)
-        
-        self.lbl_seat_count = tk.Label(right_p, text="Seats Occupied: 0 / 40 Maximum Active Nodes", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFB703")
-        self.lbl_seat_count.pack(anchor="w", pady=2)
-
-        tk.Label(right_p, text="Live Classroom Connections Monitor Roster", font=("Helvetica", 13, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", pady=5)
-        
-        self.t_roster = ttk.Treeview(right_p, columns=("name", "status", "score"), show="headings")
-        self.t_roster.heading("name", text="Student Display Identifier")
-        self.t_roster.heading("status", text="Realtime Activity State Action")
-        self.t_roster.heading("score", text="CBT Lock Matrix Result Track")
-        self.t_roster.pack(fill="both", expand=True, pady=5)
-        
-        dm_box = tk.LabelFrame(right_p, text="Direct Assist Console (One-to-One Private Messaging)", bg="#1C2541", fg="#5BC0BE")
-        dm_box.pack(fill="x", pady=5)
-        
-        self.ent_dm_target = tk.Entry(dm_box, width=15, bg="#0B132B", fg="#FFFFFF")
-        self.ent_dm_target.insert(0, "Target Student")
-        self.ent_dm_target.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        self.ent_dm_txt = tk.Entry(dm_box, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
-        self.ent_dm_txt.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
-        
-        btn_dm_send = tk.Button(dm_box, text="Send Direct Text", command=self.teacher_send_dm, bg="#5BC0BE", fg="#0B132B")
-        btn_dm_send.pack(side=tk.RIGHT, padx=5, pady=5)
-
-    def toggle_global_student_mute(self):
-        self.is_audio_muted = not self.is_audio_muted
-        state_txt = "MUTED" if self.is_audio_muted else "UNMUTED"
-        self.btn_mute_all.config(text=f"Unmute Students" if self.is_audio_muted else "Mute All Students", bg="#E63946" if self.is_audio_muted else "#0B132B")
-        self.push_global_broadcast({"action": "AV_OVERRIDE", "channel": "AUDIO", "state": state_txt})
-
-    def toggle_global_student_camera(self):
-        self.is_video_blocked = not self.is_video_blocked
-        state_txt = "BLOCKED" if self.is_video_blocked else "ACTIVE"
-        self.btn_block_cam.config(text=f"Activate Cameras" if self.is_video_blocked else "Block All Cameras", bg="#E63946" if self.is_video_blocked else "#0B132B")
-        self.push_global_broadcast({"action": "AV_OVERRIDE", "channel": "VIDEO", "state": state_txt})
-
-    def teacher_broadcast_media(self):
-        path = filedialog.askopenfilename(filetypes=[("Class Media Distribution", "*.png *.jpg *.jpeg *.pdf *.txt")])
-        if path:
-            filename = os.path.basename(path)
-            self.push_global_broadcast({"action": "MEDIA_SHARE", "filename": filename})
-
-    def teacher_generate_pin(self):
-        digits = "".join(random.choices(string.digits, k=4))
-        letters = "".join(random.choices(string.ascii_uppercase, k=2))
-        self.active_session_pin = digits + letters
-        self.lbl_t_pin.config(text=f"CODE: {self.active_session_pin}")
-
-    def teacher_launch_class(self):
-        self.current_class_name = self.ent_cname.get().strip()
-        if not self.current_class_name or not self.active_session_pin:
-            return
-        
-        self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
-                            (self.active_session_pin, f"SESSION_START:{self.current_class_name}"))
-        self.conn.commit()
-        self.btn_t_break.config(state=tk.NORMAL, bg="#E63946")
-        self.push_global_broadcast({"action": "LAUNCH_CLASS", "title": self.current_class_name})
-
-    def teacher_toggle_break(self):
-        if not self.is_break_active:
-            self.is_break_active = True
-            self.break_time_left = 600
-            self.btn_t_break.config(text="Extend Break Time (+2m)", bg="#FFB703")
-            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', 'STATE:BREAK_START')", (self.active_session_pin,))
-            self.conn.commit()
-            self.push_global_broadcast({"action": "BREAK_START", "duration": self.break_time_left})
-            threading.Thread(target=self.teacher_break_clock_loop, daemon=True).start()
-        else:
-            self.break_time_left += 120
-            self.push_global_broadcast({"action": "BREAK_EXTEND", "duration": self.break_time_left})
-
-    def teacher_break_clock_loop(self):
-        while self.break_time_left > 0 and self.is_break_active:
-            time.sleep(1)
-            self.break_time_left -= 1
-        if self.break_time_left <= 0:
-            self.is_break_active = False
-            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', 'STATE:BREAK_END')", (self.active_session_pin,))
-            self.conn.commit()
-            self.push_global_broadcast({"action": "BREAK_END"})
-            self.root.after(0, lambda: self.btn_t_break.config(text="Initiate Break Time (10m)", bg="#E63946"))
-
-    def teacher_open_exam(self):
-        win = tk.Toplevel(self.root)
-        win.title("NexusLearn Assessment Center")
-        win.geometry("500x380")
-        win.configure(bg="#1C2541")
-        
-        tk.Label(win, text="CBT Testing Parameters Builder", font=("Helvetica", 11, "bold"), bg="#1C2541", fg="#5BC0BE").pack(pady=10)
-        
-        tk.Label(win, text="Question Prompt:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
-        t_box = tk.Text(win, height=4, bg="#0B132B", fg="#FFFFFF")
-        t_box.pack(fill="x", padx=20, pady=5)
-        
-        tk.Label(win, text="Options Matrix Array (Split with | character):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
-        e_opts = tk.Entry(win, bg="#0B132B", fg="#FFFFFF")
-        e_opts.insert(0, "Option A | Option B | Option C | Option D")
-        e_opts.pack(fill="x", padx=20, pady=5)
-        
-        tk.Label(win, text="Testing Time Constraints (Minutes):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
-        e_time = tk.Entry(win, width=10, bg="#0B132B", fg="#FFFFFF")
-        e_time.insert(0, "45")
-        e_time.pack(anchor="w", padx=20, pady=5)
-        
-        def deploy():
-            q = t_box.get("1.0", tk.END).strip()
-            opts = e_opts.get().strip()
-            tm = e_time.get().strip()
-            if q and tm:
-                self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
-                                    (self.active_session_pin, f"EXAM_LAUNCH:{tm}|{q}|{opts}"))
-                self.conn.commit()
-                
-                split_opts = [o.strip() for o in opts.split("|") if o.strip()]
-                self.push_global_broadcast({
-                    "action": "DEPLOY_CBT",
-                    "question": q,
-                    "options": split_opts,
-                    "duration": tm
-                })
-                win.destroy()
-                
-        tk.Button(win, text="Publish Assessment Live", command=deploy, bg="#5BC0BE", fg="#0B132B").pack(pady=15)
-
-    def teacher_send_dm(self):
-        t = self.ent_dm_target.get().strip()
-        m = self.ent_dm_txt.get().strip()
-        if t and m and self.active_session_pin:
-            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'TEACHER', ?, ?)",
-                                (self.active_session_pin, t, m))
-            self.conn.commit()
-            self.push_global_broadcast({"action": "PRIVATE_ALERT", "target": t, "message": m})
-            self.ent_dm_txt.delete(0, tk.END)
-
-    def load_student_login(self):
-        if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists():
-            self.gateway_frame.destroy()
-        
-        self.s_login_frame = tk.Frame(self.root, bg="#0B132B")
-        self.s_login_frame.pack(expand=True)
-        
-        tk.Label(self.s_login_frame, text="Student Entry Gateway", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#5BC0BE").pack(pady=15)
-        
-        tk.Label(self.s_login_frame, text="Your Screen Profile Name:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
-        self.ent_s_name = tk.Entry(self.s_login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
-        self.ent_s_name.pack(pady=5)
-        
-        tk.Label(self.s_login_frame, text="Active Classroom Code:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
-        self.ent_s_code = tk.Entry(self.s_login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
-        self.ent_s_code.pack(pady=5)
-        
-        btn_connect = tk.Button(self.s_login_frame, text="Establish Connection Roster", command=self.verify_student_entry, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"))
-        btn_connect.pack(pady=20)
-
-    def verify_student_entry(self):
-        self.student_name = self.ent_s_name.get().strip() or "Student Node"
-        self.active_session_pin = self.ent_s_code.get().strip()
-        self.s_login_frame.destroy()
-        self.build_student_workspace()
-
-    def build_student_workspace(self):
-        if hasattr(self, 's_login_frame') and self.s_login_frame.winfo_exists(): self.s_login_frame.destroy()
-        
-        self.s_work = tk.Frame(self.root, bg="#0B132B")
-        self.s_work.pack(fill="both", expand=True)
-        
-        self.s_stage = tk.Frame(self.s_work, bg="#1C2541", height=420)
-        self.s_stage.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        self.lbl_s_view = tk.Label(self.s_stage, text="▲ Audio & Video Feed Sync Active\n[Awaiting Instructional Materials]", font=("Helvetica", 13), bg="#1C2541", fg="#FFFFFF")
-        self.lbl_s_view.pack(expand=True)
-
-        self.lbl_av_indicator = tk.Label(self.s_work, text="🎤 Mic: LIVE | 📷 Camera: BROADCASTING", font=("Helvetica", 10, "bold"), bg="#0B132B", fg="#5BC0BE")
-        self.lbl_av_indicator.pack(pady=2)
-        
-        s_dock = tk.Frame(self.s_work, bg="#0B132B", height=70)
-        s_dock.pack(fill="x", side=tk.BOTTOM, padx=10, pady=5)
-        
-        btn_raise = tk.Button(s_dock, text="🖐️ Raise Hand", command=lambda: self.dispatch_student_emote("🖐️", "EMOTE_RAISE"), bg="#1C2541", fg="#FFFFFF")
-        btn_raise.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        btn_clap = tk.Button(s_dock, text="👏 Send Clap", command=lambda: self.dispatch_student_emote("👏", "EMOTE_CLAP"), bg="#1C2541", fg="#FFFFFF")
-        btn_clap.pack(side=tk.LEFT, padx=5, pady=5)
-
-        btn_s_media = tk.Button(s_dock, text="Upload Class File", command=self.student_upload_media, bg="#1C2541", fg="#FFB703")
-        btn_s_media.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        tk.Label(s_dock, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.RIGHT, padx=10)
-
-        threading.Thread(target=self.student_sync_thread, daemon=True).start()
-
-    def student_upload_media(self):
-        path = filedialog.askopenfilename(filetypes=[("Student Workspace Share", "*.png *.jpg *.jpeg *.txt")])
-
-    def dispatch_student_emote(self, emote, action_name):
-        lbl = tk.Label(self.s_stage, text=emote, font=("Helvetica", 36), bg="#1C2541", fg="#5BC0BE")
-        lbl.place(relx=0.8, rely=0.7)
-        self.root.after(2000, lbl.destroy)
-        
-        def push_signal():
-            try:
-                requests.post(SECURE_CLOUD_ENDPOINT, json={
-                    "type": "STUDENT_ACTION",
-                    "name": self.student_name,
-                    "code": self.active_session_pin,
-                    "action": action_name,
-                    "timestamp": int(time.time() * 1000)
-                }, timeout=3)
-            except Exception: pass
-        threading.Thread(target=push_signal, daemon=True).start()
-
-    def student_sync_thread(self):
-        last_seen_id = 0
-        while True:
-            time.sleep(1.5)
-            self.cursor.execute("SELECT id, sender, recipient, message FROM chat_logs WHERE id > ? AND session_id=?", (last_seen_id, self.active_session_pin))
-            entries = self.cursor.fetchall()
-            
-            for eid, sender, recipient, msg in entries:
-                last_seen_id = eid
-                if recipient == "BROADCAST":
-                    if msg == "STATE:BREAK_START":
-                        self.root.after(0, lambda: self.student_render_break(600))
-                    elif msg == "STATE:BREAK_END":
-                        self.root.after(0, self.student_clear_break)
-                    elif msg.startswith("EXAM_LAUNCH:"):
-                        payload = msg.split(":", 1)[1]
-                        self.root.after(0, self.student_force_cbt, payload)
-                elif recipient == self.student_name and sender == "TEACHER":
-                    pass
-
-    def student_render_break(self, duration_secs):
-        self.s_break_overlay = tk.Frame(self.root, bg="#0B132B")
-        self.s_break_overlay.place(x=0, y=0, relwidth=1, relheight=1)
-        
-        self.lbl_break_timer = tk.Label(self.s_break_overlay, text="Class is on a Short Break\n\nCamera System & Microphones Muted For Privacy\n\nCountdown: 10:00", font=("Helvetica", 16, "bold"), bg="#0B132B", fg="#FFB703")
-        self.lbl_break_timer.pack(expand=True)
-        
-        self.lbl_av_indicator.config(text="🎤 Mic: MUTED BY TEACHER | 📷 Camera: BLOCKED", fg="#E63946")
-        
-        def count_loop(rem):
-            while rem > 0 and hasattr(self, 's_break_overlay') and self.s_break_overlay.winfo_exists():
-                mins, secs = divmod(rem, 60)
-                try:
-                    self.lbl_break_timer.config(text=f"Class is on a Short Break\n\nCamera System & Microphones Muted For Privacy\n\nCountdown: {mins:02d}:{secs:02d}")
-                except Exception: break
-                time.sleep(1)
-                rem -= 1
-        threading.Thread(target=count_loop, args=(duration_secs,), daemon=True).start()
-
-    def student_clear_break(self):
-        if hasattr(self, 's_break_overlay'):
-            self.s_break_overlay.destroy()
-        self.lbl_av_indicator.config(text="🎤 Mic: LIVE | 📷 Camera: BROADCASTING", fg="#5BC0BE")
-
-    def student_force_cbt(self, dataset):
-        parts = dataset.split("|")
-        duration = parts[0]
-        quest = parts[1]
-        options = parts[2] if len(parts) > 2 else "A|B|C|D"
-        
-        self.s_work.pack_forget()
-        
-        self.cbt_frame = tk.Frame(self.root, bg="#0B132B")
-        self.cbt_frame.pack(fill="both", expand=True)
-        
-        tk.Label(self.cbt_frame, text=f"Time Remaining: {duration}:00", font=("Courier", 14, "bold"), bg="#0B132B", fg="#E63946").pack(pady=10)
-        tk.Label(self.cbt_frame, text="EXAM APP ENVIRONMENT LOCK", font=("Helvetica", 10, "bold"), bg="#0B132B", fg="#5BC0BE").pack()
-        
-        lbl_q = tk.Label(self.cbt_frame, text=quest, font=("Helvetica", 14), bg="#1C2541", fg="#FFFFFF", padding=25, relief=tk.SOLID, wraplength=750)
-        lbl_q.pack(fill="x", padx=50, pady=25)
-        
-        btn_pane = tk.Frame(self.cbt_frame, bg="#0B132B")
-        btn_pane.pack(pady=10)
-        
-        for opt in options.split("|"):
-            clean_opt = opt.strip()
-            tk.Button(btn_pane, text=clean_opt, font=("Helvetica", 11), bg="#1C2541", fg="#FFFFFF", width=35, command=lambda o=clean_opt: self.student_submit_cbt(o)).pack(pady=5)
-
-    def student_submit_cbt(self, selected_option):
-        def report():
-            try:
-                requests.post(SECURE_CLOUD_ENDPOINT, json={
-                    "type": "CBT_SUBMISSION",
-                    "name": self.student_name,
-                    "code": self.active_session_pin,
-                    "answer": selected_option,
-                    "timestamp": int(time.time() * 1000)
-                }, timeout=3)
-            except Exception: pass
-        threading.Thread(target=report, daemon=True).start()
-        
-        self.cbt_frame.destroy()
-        self.s_work.pack(fill="both", expand=True)
+        except Exception: pass
 
 if __name__ == "__main__":
     root = tk.Tk()
