@@ -3,412 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusLearn // Premium Unified Learning Environment</title>
+    <title>NexusLearn // Educator Gateway</title>
     <style>
-        :root {
-            --bg-dark: #050811;
-            --panel-dark: rgba(15, 22, 38, 0.85);
-            --gold-primary: #D4AF37;
-            --gold-gradient: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
-            --text-light: #FFFFFF;
-            --text-muted: #9CA3AF;
-        }
-
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-light);
+            background-color: #050811;
+            color: #FFFFFF;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* PREMIUM GOLD FLOATING BACKGROUND LAYER */
-        .bg-floating-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 1;
-            pointer-events: none;
-        }
-        .floating-item {
-            position: absolute;
-            font-size: 45px;
-            opacity: 0.18;
-            filter: drop-shadow(0 0 8px var(--gold-primary));
-            animation: floatAnimation 14s infinite linear;
-            bottom: -70px;
-        }
-        @keyframes floatAnimation {
-            0% {
-                transform: translateY(0) rotate(0deg) scale(0.8);
-                opacity: 0;
-            }
-            15% { opacity: 0.22; }
-            85% { opacity: 0.22; }
-            100% {
-                transform: translateY(-115vh) rotate(360deg) scale(1.2);
-                opacity: 0;
-            }
-        }
-        
-        /* GOLD & CYBER BOOT / LOADING SCREEN */
-        #boot-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: var(--bg-dark);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.6s ease;
             padding: 20px;
             box-sizing: border-box;
         }
-        .boot-logo {
-            color: var(--gold-primary);
-            font-size: 40px;
-            font-weight: bold;
-            text-align: center;
-            line-height: 1.2;
-            margin-bottom: 15px;
-            letter-spacing: 3px;
-            text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
-        
-        .boot-about-box {
-            background-color: #111827;
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 10px;
-            padding: 18px;
-            font-size: 14px;
-            color: #E5E7EB;
-            line-height: 1.6;
-            max-width: 340px;
-            text-align: center;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
 
-        .boot-pct {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: var(--gold-primary);
-            font-weight: bold;
-        }
-        .progress-bar-container {
-            width: 300px;
-            height: 8px;
-            background-color: #1F2937;
-            border-radius: 4px;
-            overflow: hidden;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-        }
-        .progress-bar-fill {
-            width: 0%;
-            height: 100%;
-            background: var(--gold-gradient);
-            box-shadow: 0 0 10px var(--gold-primary);
-        }
-
-        /* MAIN PORTAL CONTAINER WITH GLASSMORPHISM */
         .container {
-            background-color: var(--panel-dark);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 40px;
+            background-color: #0F1626;
+            padding: 35px;
             border-radius: 20px;
             text-align: center;
-            width: 360px;
+            width: 100%;
+            max-width: 440px;
             box-shadow: 0 20px 45px rgba(0,0,0,0.8);
-            z-index: 10;
-            border: 1px solid rgba(212, 175, 55, 0.25);
-            opacity: 0;
-            transform: scale(0.95);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-        
-        .container.active {
-            opacity: 1;
-            transform: scale(1);
-        }
-        
-        h1.logo-icon { 
-            color: var(--gold-primary); 
-            font-size: 46px; 
-            margin: 0 0 5px 0; 
-            text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
-        }
-        h2 { font-size: 26px; margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px; }
-        p.subtitle { color: var(--gold-primary); font-size: 13px; margin: 0 0 25px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
-        
-        .about-box {
-            background-color: var(--bg-dark);
-            border-radius: 10px;
-            padding: 16px;
-            font-size: 13px;
-            color: #D1D5DB;
-            line-height: 1.5;
-            margin-bottom: 25px;
-            text-align: left;
-            border-left: 4px solid var(--gold-primary);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            box-sizing: border-box;
         }
 
-        label { display: block; text-align: left; font-size: 13px; margin-top: 15px; color: #E5E7EB; font-weight: 500; }
+        .logo {
+            color: #D4AF37;
+            font-size: 28px;
+            margin: 0 0 5px 0;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #A0AABF;
+            font-size: 11px;
+            margin: 0 0 25px 0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            font-size: 13px;
+            margin-top: 15px;
+            color: #E5E7EB;
+        }
+
         input {
             width: 100%;
             padding: 12px;
             margin-top: 6px;
             box-sizing: border-box;
-            background-color: var(--bg-dark);
+            background-color: #050811;
             border: 1px solid #1F2937;
             border-radius: 8px;
-            color: var(--text-light);
+            color: #FFFFFF;
             font-size: 14px;
-            transition: border-color 0.3s, box-shadow 0.3s;
         }
+
         input:focus {
             outline: none;
-            border-color: var(--gold-primary);
-            box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+            border-color: #D4AF37;
         }
-        
+
         .btn {
             display: block;
             width: 100%;
-            padding: 15px;
-            margin: 18px 0 5px 0;
+            padding: 14px;
+            margin: 25px 0 15px 0;
             border: none;
-            border-radius: 10px;
-            font-size: 15px;
+            border-radius: 8px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.25s ease;
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
+            color: #050811;
         }
-        .btn-primary { 
-            background: var(--gold-gradient);
-            color: var(--bg-dark); 
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
-        .btn-primary:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); 
+
+        .nav-link {
+            color: #6C757D;
+            font-size: 12px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
         }
-        .btn-secondary { 
-            background-color: #0F1626; 
-            color: var(--gold-primary); 
-            border: 2px solid var(--gold-primary); 
+
+        .nav-link:hover {
+            color: #D4AF37;
         }
-        .btn-secondary:hover { 
-            background-color: rgba(212, 175, 55, 0.1); 
-            transform: translateY(-2px); 
+
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #9CA3AF;
         }
-        .btn-text { background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; margin-top: 15px; font-size: 13px; }
-        .btn-text:hover { color: var(--gold-primary); }
-        
-        .fixed-left-footer {
-            position: fixed;
-            bottom: 20px;
-            left: 25px;
-            font-size: 12.5px;
-            color: var(--text-muted);
-            font-style: italic;
-            z-index: 10000;
-            letter-spacing: 0.5px;
+
+        .footer strong {
+            color: #D4AF37;
         }
-        .fixed-left-footer strong {
-            color: var(--gold-primary);
-            font-style: normal;
-        }
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div class="bg-floating-layer" id="floating-layer"></div>
-
-    <div id="boot-screen">
-        <div class="boot-logo">▲<br>NEXUSLEARN</div>
-        <div class="boot-about-box">
-            <strong>About the App:</strong><br>
-            A premium high-performance network platform engineered to connect live classrooms, deploy secure CBT modules, and sync administration controls safely.
-        </div>
-        <div id="boot-text" class="boot-pct">System Booting: 01%</div>
-        <div class="progress-bar-container">
-            <div id="progress-fill" class="progress-bar-fill"></div>
-        </div>
-    </div>
-
-    <div id="gateway-view" class="container hidden">
-        <h1 class="logo-icon">▲</h1>
-        <h2>NexusLearn</h2>
-        <p class="subtitle">Unified Learning Environment</p>
-        <div class="about-box">
-            <strong>Platform Information:</strong><br>
-            A secure visual gateway providing direct control linkages for educators and system node streams for active student tracking environments.
-        </div>
-        <button class="btn btn-primary" onclick="switchView('teacher-view')">[ I am a Teacher ]</button>
-        <button class="btn btn-secondary" onclick="switchView('student-view')">[ I am a Student ]</button>
-    </div>
-
-    <div id="teacher-view" class="container hidden">
-        <h1 class="logo-icon">▲</h1>
-        <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Educator Gateway</h2>
-        <p class="subtitle" style="color: var(--text-muted);">Secure Terminal Authentication</p>
+    <div class="container">
+        <div class="logo">Educator Gateway</div>
+        <div class="subtitle">Secure Terminal Authentication</div>
+        
         <label>Username / Email:</label>
-        <input type="text" id="t-user" placeholder="Enter administrative login">
+        <input type="text" id="teacher-user" placeholder="Enter educator profile identifier">
+        
         <label>Password:</label>
-        <input type="password" id="t-pass" placeholder="Enter account password">
-        <label>Admin Authorization PIN:</label>
-        <input type="text" id="t-pin" placeholder="Enter secure PIN matrix">
-        <button class="btn btn-primary" onclick="handleTeacherLogin()">Verify Credentials</button>
-        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
-    </div>
-
-    <div id="student-view" class="container hidden">
-        <h1 class="logo-icon">▲</h1>
-        <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Student Gateway</h2>
-        <p class="subtitle" style="color: var(--text-muted);">Classroom Node Interface</p>
-        <label>Your Screen Profile Name:</label>
-        <input type="text" id="s-name" placeholder="Enter your full name">
-        <label>Active Classroom Code:</label>
-        <input type="text" id="s-code" placeholder="Enter 6-digit active code">
-        <button class="btn btn-primary" onclick="handleStudentLogin()">Initialize Node Connection</button>
-        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
-    </div>
-
-    <div class="fixed-left-footer">
-        producer/founder - <strong>Talabi David Adeoluwa</strong>
+        <input type="password" id="teacher-pass" placeholder="Enter access credentials">
+        
+        <button class="btn" onclick="verifyEducatorCredentials()">Verify Credentials</button>
+        
+        <a href="#" class="nav-link">← Return to Gateway</a>
+        
+        <div class="footer">
+            producer/founder - <strong>Talabi David Adeoluwa</strong>
+        </div>
     </div>
 
     <script>
-        // Floating decorative layers
-        const layer = document.getElementById('floating-layer');
-        const elements = ['📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️'];
-        elements.forEach((emoji, index) => {
-            const span = document.createElement('span');
-            span.className = 'floating-item';
-            span.innerText = emoji;
-            span.style.left = `${(index * 8) + Math.random() * 6}%`;
-            span.style.animationDelay = `${Math.random() * 7}s`;
-            span.style.animationDuration = `${9 + Math.random() * 6}s`;
-            layer.appendChild(span);
-        });
+        function verifyEducatorCredentials() {
+            const user = document.getElementById('teacher-user').value.trim();
+            const pass = document.getElementById('teacher-pass').value;
 
-        // Fast boot initialization
-        window.addEventListener('DOMContentLoaded', () => {
-            let percent = 1;
-            const textElement = document.getElementById('boot-text');
-            const fillElement = document.getElementById('progress-fill');
-            const bootScreen = document.getElementById('boot-screen');
-            const gatewayView = document.getElementById('gateway-view');
-
-            const interval = setInterval(() => {
-                percent++;
-                textElement.innerText = `System Booting: ${percent < 10 ? '0' + percent : percent}%`;
-                fillElement.style.width = `${percent}%`;
-
-                if (percent >= 100) {
-                    clearInterval(interval);
-                    bootScreen.style.opacity = '0';
-                    setTimeout(() => {
-                        bootScreen.style.display = 'none';
-                        gatewayView.classList.remove('hidden');
-                        setTimeout(() => gatewayView.classList.add('active'), 50);
-                    }, 600);
-                }
-            }, 30);
-        });
-
-        function switchView(viewId) {
-            const views = ['gateway-view', 'teacher-view', 'student-view'];
-            views.forEach(id => {
-                const view = document.getElementById(id);
-                view.classList.remove('active');
-                view.classList.add('hidden');
-            });
-            const targetView = document.getElementById(viewId);
-            targetView.classList.remove('hidden');
-            setTimeout(() => { targetView.classList.add('active'); }, 50);
-        }
-
-        // =========================================================================
-        // SECURE SECURE PUBLIC HTTPS CLOUD LINKAGE CHANNEL (ZERO SERVER REQ)
-        // =========================================================================
-        const SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request";
-        let sessionCheckInterval = null;
-
-        function handleTeacherLogin() {
-            const user = document.getElementById('t-user').value;
-            const pass = document.getElementById('t-pass').value;
-            const pin = document.getElementById('t-pin').value;
-            
-            if (user && pass && pin) {
-                const packet = { type: "TEACHER_LOGIN", username: user, password: pass, pin: pin, timestamp: Date.now() };
-                
-                // Write transaction straight into global secure network bucket
-                fetch(SECURE_CLOUD_ENDPOINT, {
-                    method: 'POST',
-                    body: JSON.stringify(packet)
-                })
-                .then(() => {
-                    alert('Handshake sent safely to cloud mesh! Syncing desktop terminal environment...');
-                    startPollingForAppSync(user, 'Teacher');
-                })
-                .catch(err => alert('Cloud Sync Timeout. Retry connection pipeline configuration.'));
-            } else {
-                alert('Please fill out all administrative verification nodes.');
+            if (!user || !pass) {
+                alert("Please fill in all layout credentials fields.");
+                return;
             }
-        }
 
-        function handleStudentLogin() {
-            const name = document.getElementById('s-name').value;
-            const code = document.getElementById('s-code').value;
-            
-            if (name && code) {
-                const packet = { type: "STUDENT_LOGIN", name: name, code: code, timestamp: Date.now() };
-                
-                fetch(SECURE_CLOUD_ENDPOINT, {
-                    method: 'POST',
-                    body: JSON.stringify(packet)
-                })
-                .then(() => {
-                    alert('Connecting to active session node...');
-                    startPollingForAppSync(name, 'Student', code);
-                })
-                .catch(err => alert('Failed Cloud Registry Route.'));
-            } else {
-                alert('Please declare profile name and class code vectors.');
-            }
-        }
-
-        function startPollingForAppSync(username, role, code = 'GLOBAL_NODE') {
-            if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-            const confirmationUrl = `https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_confirm_${username}`;
-            
-            sessionCheckInterval = setInterval(() => {
-                fetch(confirmationUrl)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.status === "ACTIVE_IN_APP") {
-                        clearInterval(sessionCheckInterval);
-                        alert(`App linkage established! Workspace synchronized successfully as ${role}.`);
-                    }
-                })
-                .catch(() => {}); // Wait quietly for app approval write
-            }, 3000);
+            // Client-side execution loop to bypass backend network dependencies
+            alert(`Authentication Request Processed Locally:\nUser: ${user}\nStatus: Portal Interface Active`);
         }
     </script>
 </body>
