@@ -11,9 +11,9 @@ from flask_cors import CORS
 import os
 
 # Initialize Flask App for Web Connectivity
-server = Flask(__name__)
+server = Flask(__name__, template_folder='templates')
 CORS(server)
-server.secret_key = "nexuslearn_secret_key_for_session"  # Required for session operations
+server.secret_key = "nexuslearn_secret_key_for_session"  # Required for browser flash communications
 
 DB_FILE = "nexuslearn_system.db"
 
@@ -29,7 +29,7 @@ def get_db_connection():
 
 @server.route('/', methods=['GET'])
 def serve_main_hub():
-    """Serves the integrated template which starts on the loading page first."""
+    """Renders index.html, which automatically processes loading and transitions to signin on completion."""
     return render_template('index.html')
 
 @server.route('/signin', methods=['POST'])
@@ -52,7 +52,7 @@ def signin():
         if not username or not password or not teacher_pin:
             return redirect(url_for('serve_main_hub', error="Please fill in all teacher authorization fields.", role="teacher"))
         
-        # Verify administrative status from localized database
+        # Query Database system to verify administrative status of the admin-generated PIN
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with get_db_connection() as conn:
             conn.row_factory = sqlite3.Row
@@ -222,7 +222,9 @@ def admin_override_account():
 def start_server():
     if not os.path.exists('static'):
         os.makedirs('static')
-    # Run server utilizing standard folder structures templates/index.html
+    if not os.path.exists('templates'):
+        os.makedirs('templates')
+    # Runs backend Flask server targeting clean templates configuration
     server.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
 
 # =====================================================================
@@ -241,174 +243,4 @@ class NexusLearnAdminConsole:
         self.style = ttk.Style()
         self.style.theme_use("clam")
         self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
-        self.style.map("Treeview", background=[('selected', '#5BC0BE')])
-        
-        self.build_layout()
-        self.refresh_all_monitors()
-        self.auto_refresh_loop()
-
-    def init_admin_database(self):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS teachers (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    auth_pin TEXT UNIQUE NOT NULL,
-                    payment_status TEXT DEFAULT 'Unpaid',
-                    expiration_timestamp DATETIME
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS chat_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT,
-                    message TEXT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.commit()
-
-    def generate_unique_secure_pin(self):
-        while True:
-            digits = "".join(random.choices(string.digits, k=4))
-            letters = "".join(random.choices(string.ascii_uppercase, k=2))
-            pin = digits + letters
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
-                if not cursor.fetchone():
-                    return pin
-
-    def register_and_expire_pin(self):
-        username = self.ent_user.get().strip()
-        password = self.ent_pass.get().strip()
-        payment = self.combo_payment.get()
-        hours_valid = self.ent_expiry.get().strip()
-        
-        if not username or not password or not hours_valid:
-            messagebox.showerror("Error", "All parameter windows must be completely assigned.")
-            return
-        try:
-            hours = int(hours_valid)
-        except ValueError:
-            messagebox.showerror("Error", "Expiry duration value must be an integer (Hours).")
-            return
-            
-        auth_pin = self.generate_unique_secure_pin()
-        expiration_time = datetime.datetime.now() + datetime.timedelta(hours=hours)
-        expiration_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S')
-        
-        try:
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
-                    (username, password, auth_pin, payment, expiration_str)
-                )
-                conn.commit()
-            messagebox.showinfo("PIN Live", f"Authorization Node Written!\n\nGenerated PIN: {auth_pin}\nExpires: {expiration_str}")
-            self.ent_user.delete(0, tk.END)
-            self.ent_pass.delete(0, tk.END)
-            self.refresh_all_monitors()
-        except sqlite3.IntegrityError:
-            messagebox.showerror("Registry Collision", "Target account identifier already exists inside network arrays.")
-
-    def refresh_all_monitors(self):
-        for item in self.tree_accounts.get_children():
-            self.tree_accounts.delete(item)
-            
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
-            for row in cursor.fetchall():
-                self.tree_accounts.insert("", tk.END, values=row)
-                
-        for item in self.tree_live.get_children():
-            self.tree_live.delete(item)
-            
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
-            for row in cursor.fetchall():
-                self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
-
-    def auto_refresh_loop(self):
-        try:
-            self.refresh_all_monitors()
-        except Exception:
-            pass
-        self.root.after(3000, self.auto_refresh_loop)
-
-    def build_layout(self):
-        header = tk.Frame(self.root, bg="#1C2541", height=60)
-        header.pack(fill="x")
-        header.pack_propagate(False)
-        
-        tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT COMMAND HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
-        tk.Label(header, text="Producer Access Layer", font=("Helvetica", 10, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.RIGHT, padx=20)
-
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        tab1 = tk.Frame(notebook, bg="#0B132B")
-        notebook.add(tab1, text=" Credentials & Account Ledgers ")
-        
-        form_p = tk.LabelFrame(tab1, text=" Authorize New Teacher Profile ", bg="#1C2541", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
-        form_p.pack(fill="x", padx=10, pady=10)
-        
-        tk.Label(form_p, text="Account ID:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        self.ent_user = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
-        self.ent_user.grid(row=0, column=1, padx=5, pady=5)
-        
-        tk.Label(form_p, text="System Key:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=2, padx=5, pady=5, sticky="w")
-        self.ent_pass = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
-        self.ent_pass.grid(row=0, column=3, padx=5, pady=5)
-        
-        tk.Label(form_p, text="Payment Status:", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        self.combo_payment = ttk.Combobox(form_p, values=["Paid", "Unpaid"], state="readonly", width=12)
-        self.combo_payment.current(1)
-        self.combo_payment.grid(row=1, column=1, padx=5, pady=5)
-        
-        tk.Label(form_p, text="Lifespan (Hours):", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=2, padx=5, pady=5, sticky="w")
-        self.ent_expiry = tk.Entry(form_p, width=10, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
-        self.ent_expiry.insert(0, "720") 
-        self.ent_expiry.grid(row=1, column=3, padx=5, pady=5)
-        
-        btn_commit = tk.Button(form_p, text="Commit & Generate PIN", command=self.register_and_expire_pin, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
-        btn_commit.grid(row=0, column=4, rowspan=2, padx=20, pady=5)
-        
-        self.tree_accounts = ttk.Treeview(tab1, columns=("u", "p", "f", "e"), show="headings")
-        self.tree_accounts.heading("u", text="Educator Identity Handle")
-        self.tree_accounts.heading("p", text="Permanent System PIN")
-        self.tree_accounts.heading("f", text="Financial Log State")
-        self.tree_accounts.heading("e", text="Expiration Deadline Bounds")
-        self.tree_accounts.pack(fill="both", expand=True, padx=10, pady=5)
-
-        tab2 = tk.Frame(notebook, bg="#0B132B")
-        notebook.add(tab2, text=" Live Operations Stream ")
-        
-        tk.Label(tab2, text="Real-Time Network Activity Feed", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", padx=10, pady=5)
-        
-        self.tree_live = ttk.Treeview(tab2, columns=("sid", "title", "t"), show="headings")
-        self.tree_live.heading("sid", text="Session Identifier")
-        self.tree_live.heading("title", text="Live User Activity Description")
-        self.tree_live.heading("t", text="Log Event Timestamp")
-        self.tree_live.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        btn_refresh = tk.Button(tab2, text="Force Global Data Re-Index", command=self.refresh_all_monitors, bg="#1C2541", fg="#5BC0BE")
-        btn_refresh.pack(pady=5)
-
-        footer = tk.Frame(self.root, bg="#0B132B")
-        footer.pack(fill="x", side=tk.BOTTOM, pady=5)
-        tk.Label(footer, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.LEFT, padx=15)
-
-if __name__ == "__main__":
-    # Start server with templates directory
-    threading.Thread(target=start_server, daemon=True).start()
-    
-    # Run local tkinter admin workspace
-    root = tk.Tk()
-    app = NexusLearnAdminConsole(root)
-    root.mainloop()
+        self.style.map("Treeview", background=
