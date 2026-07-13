@@ -4,7 +4,7 @@ import string
 import sqlite3
 import threading
 import sys
-from flask import Flask, jsonify, request, render_template_string
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 server = Flask(__name__)
@@ -17,7 +17,37 @@ def get_db_connection():
     conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
-# Render template directly on root and /admin endpoints
+def init_global_database():
+    """Ensures database tables are built immediately upon launch, even without Tkinter."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teachers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                auth_pin TEXT UNIQUE NOT NULL,
+                payment_status TEXT DEFAULT 'Unpaid',
+                expiration_timestamp DATETIME
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT,
+                message TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+# Initialize Database Immediately on Startup
+init_global_database()
+
+# =====================================================================
+# FLASK WEB INTERFACE ENDPOINTS
+# =====================================================================
+
 @server.route('/')
 @server.route('/admin')
 def render_admin_panel():
@@ -79,7 +109,7 @@ def get_admin_logs():
             cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 15")
             logs = [dict(row) for row in cursor.fetchall()]
         return jsonify(logs)
-    except Exception as e:
+    except Exception:
         return jsonify([])
 
 @server.route('/api/admin/generate-pin', methods=['POST'])
@@ -124,7 +154,9 @@ def start_server():
 # Start background server
 threading.Thread(target=start_server, daemon=True).start()
 
-# Safely try starting Tkinter GUI (Skipped on mobile systems like Android Termux/Pydroid)
+# =====================================================================
+# TKINTER DESKTOP INTERFACE (Safely skipped on mobile)
+# =====================================================================
 try:
     import tkinter as tk
     from tkinter import messagebox, ttk
@@ -135,7 +167,6 @@ try:
             self.root.title("NexusLearn // Master Administrative Intelligence")
             self.root.geometry("1100x650")
             self.root.configure(bg="#0B132B")
-            self.init_admin_database()
             
             self.style = ttk.Style()
             self.style.theme_use("clam")
@@ -145,29 +176,6 @@ try:
             self.build_layout()
             self.refresh_all_monitors()
             self.auto_refresh_loop()
-
-        def init_admin_database(self):
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS teachers (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT UNIQUE NOT NULL,
-                        password TEXT NOT NULL,
-                        auth_pin TEXT UNIQUE NOT NULL,
-                        payment_status TEXT DEFAULT 'Unpaid',
-                        expiration_timestamp DATETIME
-                    )
-                """)
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS chat_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        session_id TEXT,
-                        message TEXT,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                conn.commit()
 
         def generate_unique_secure_pin(self):
             while True:
