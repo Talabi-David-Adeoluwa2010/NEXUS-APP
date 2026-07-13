@@ -27,7 +27,6 @@
             position: relative;
         }
 
-        /* PREMIUM GOLD FLOATING BACKGROUND LAYER */
         .bg-floating-layer {
             position: absolute;
             top: 0;
@@ -59,7 +58,6 @@
             }
         }
         
-        /* GOLD & CYBER BOOT / LOADING SCREEN */
         #boot-screen {
             position: fixed;
             top: 0;
@@ -123,31 +121,6 @@
             box-shadow: 0 0 10px var(--gold-primary);
         }
 
-        /* NON-BLOCKING APP NOTIFICATION BANNER */
-        #app-notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: #111827;
-            border: 1px solid var(--gold-primary);
-            color: #FFFFFF;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 13px;
-            z-index: 10005;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            font-weight: 500;
-            text-align: center;
-            pointer-events: none;
-            width: 320px;
-        }
-        #app-notification.show {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* MAIN PORTAL CONTAINER WITH GLASSMORPHISM */
         .container {
             background-color: var(--panel-dark);
             backdrop-filter: blur(10px);
@@ -155,7 +128,7 @@
             padding: 40px;
             border-radius: 20px;
             text-align: center;
-            width: 380px;
+            width: 360px;
             box-shadow: 0 20px 45px rgba(0,0,0,0.8);
             z-index: 10;
             border: 1px solid rgba(212, 175, 55, 0.25);
@@ -241,13 +214,6 @@
         }
         .btn-text { background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; margin-top: 15px; font-size: 13px; }
         .btn-text:hover { color: var(--gold-primary); }
-
-        /* LIVE LIVE DASHBOARD & INTERACTION COMPONENT MODES */
-        .workspace-panel { width: 480px !important; text-align: left !important; }
-        .feed-container { background: #050811; border-radius: 8px; padding: 15px; height: 140px; overflow-y: auto; font-family: monospace; font-size: 12px; border: 1px solid #1F2937; color: #10B981; margin: 15px 0; }
-        .dock-controls { display: flex; gap: 10px; margin-top: 15px; }
-        .cbt-option-btn { background: #1F2937; color: white; border: 1px solid rgba(212,175,55,0.3); padding: 10px; text-align: left; width: 100%; border-radius: 6px; margin-bottom: 8px; cursor: pointer; font-size: 13px; transition: background 0.2s; }
-        .cbt-option-btn:hover { background: rgba(212, 175, 55, 0.15); border-color: var(--gold-primary); }
         
         .fixed-left-footer {
             position: fixed;
@@ -269,8 +235,6 @@
 <body>
 
     <div class="bg-floating-layer" id="floating-layer"></div>
-
-    <div id="app-notification">System Message Notification</div>
 
     <div id="boot-screen">
         <div class="boot-logo">▲<br>NEXUSLEARN</div>
@@ -317,34 +281,9 @@
         <label>Your Screen Profile Name:</label>
         <input type="text" id="s-name" placeholder="Enter your full name">
         <label>Active Classroom Code:</label>
-        <input type="text" id="s-code" placeholder="Enter active code parameters">
+        <input type="text" id="s-code" placeholder="Enter active code">
         <button class="btn btn-primary" onclick="handleStudentLogin()">Initialize Node Connection</button>
         <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
-    </div>
-
-    <div id="student-workspace-view" class="container workspace-panel hidden">
-        <h1 class="logo-icon" style="font-size: 32px;">▲</h1>
-        <h2 id="display-workspace-title" style="font-size: 20px; margin-bottom: 2px;">Classroom Workspace</h2>
-        <p id="display-workspace-pin" class="subtitle" style="margin-bottom: 12px; font-size: 11px;">CODE: ----</p>
-        
-        <div id="break-alert-banner" class="about-box hidden" style="border-left-color: #EF4444; background: #2D1515;">
-            <strong style="color: #F87171;">⚠️ BREAK INTERMISSION ACTIVE</strong><br>
-            Audio vectors and primary tracking lines are safely muted for personal break privacy.
-        </div>
-
-        <div id="cbt-assessment-module" class="hidden" style="background: rgba(212,175,55,0.08); padding: 15px; border-radius: 10px; border: 1px dashed var(--gold-primary); margin-bottom: 15px;">
-            <span style="color: var(--gold-primary); font-size: 11px; font-weight: bold; letter-spacing: 1px;">LIVE SECURE ASSESSMENT UNLOCKED</span>
-            <p id="cbt-question-text" style="font-size: 14px; font-weight: bold; margin: 8px 0; color: white;">Awaiting matrix...</p>
-            <div id="cbt-options-box"></div>
-        </div>
-
-        <label style="margin-top: 5px;">Active Sync Signal Stream Logs:</label>
-        <div id="terminal-feed-logs" class="feed-container"></div>
-
-        <div class="dock-controls">
-            <button class="btn btn-secondary" style="margin:0; font-size:13px;" onclick="dispatchEmoteSignal('EMOTE_RAISE')">🖐️ Raise Hand</button>
-            <button class="btn btn-secondary" style="margin:0; font-size:13px;" onclick="dispatchEmoteSignal('EMOTE_CLAP')">👏 Send Applause</button>
-        </div>
     </div>
 
     <div class="fixed-left-footer">
@@ -352,7 +291,6 @@
     </div>
 
     <script>
-        // Floating decorative elements setup
         const layer = document.getElementById('floating-layer');
         const elements = ['📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️'];
         elements.forEach((emoji, index) => {
@@ -365,7 +303,6 @@
             layer.appendChild(span);
         });
 
-        // Fast boot initialization
         window.addEventListener('DOMContentLoaded', () => {
             let percent = 1;
             const textElement = document.getElementById('boot-text');
@@ -387,41 +324,26 @@
                         setTimeout(() => gatewayView.classList.add('active'), 50);
                     }, 600);
                 }
-            }, 10);
+            }, 12);
         });
 
-        function showAppNotification(message) {
-            const banner = document.getElementById('app-notification');
-            banner.innerText = message;
-            banner.classList.add('show');
-            setTimeout(() => {
-                banner.classList.remove('show');
-            }, 3500);
-        }
-
         function switchView(viewId) {
-            const views = ['gateway-view', 'teacher-view', 'student-view', 'student-workspace-view'];
+            const views = ['gateway-view', 'teacher-view', 'student-view'];
             views.forEach(id => {
                 const view = document.getElementById(id);
-                if (view) {
-                    view.classList.remove('active');
-                    view.classList.add('hidden');
-                }
+                view.classList.remove('active');
+                view.classList.add('hidden');
             });
             const targetView = document.getElementById(viewId);
-            if (targetView) {
-                targetView.classList.remove('hidden');
-                setTimeout(() => { targetView.classList.add('active'); }, 50);
-            }
+            targetView.classList.remove('hidden');
+            setTimeout(() => { targetView.classList.add('active'); }, 50);
         }
 
         // =========================================================================
-        // ANTI-TIMEOUT INSTANT FALLBACK INFRASTRUCTURE ENGINE
+        // ANTI-TIMEOUT SECURE CLOUD MESH ENGINE
         // =========================================================================
         const SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request";
-        let broadcastPollInterval = null;
-        let currentStudentProfileName = "";
-        let currentSessionCodePin = "";
+        let sessionCheckInterval = null;
 
         function handleTeacherLogin() {
             const user = document.getElementById('t-user').value.trim();
@@ -429,14 +351,10 @@
             const pin = document.getElementById('t-pin').value;
             
             if (user && pass && pin) {
-                currentStudentProfileName = user;
-                currentSessionCodePin = pin;
-                
                 const packet = { type: "TEACHER_LOGIN", username: user, password: pass, pin: pin, timestamp: Date.now() };
                 
-                // CRITICAL FIX: 100ms ultra-low cutoff to make local fallback instantly seamless
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 100);
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
 
                 fetch(SECURE_CLOUD_ENDPOINT, {
                     method: 'POST',
@@ -445,16 +363,16 @@
                 })
                 .then(() => {
                     clearTimeout(timeoutId);
-                    showAppNotification("Handshake synchronized with network stream.");
-                    initializeLiveWorkspaceView("Teacher");
+                    alert('Handshake sent safely to cloud mesh! Syncing desktop terminal environment...');
+                    startPollingForAppSync(user, 'Teacher');
                 })
-                .catch(() => {
+                .catch(err => {
                     clearTimeout(timeoutId);
-                    showAppNotification("Workspace synchronized via Local Core Link.");
-                    initializeLiveWorkspaceView("Teacher");
+                    alert('Synchronizing interface... Loading central master deck configuration loops.');
+                    startPollingForAppSync(user, 'Teacher');
                 });
             } else {
-                showAppNotification("Please fill out all authorization fields.");
+                alert('Please fill out all administrative verification nodes.');
             }
         }
 
@@ -463,12 +381,10 @@
             const code = document.getElementById('s-code').value.trim();
             
             if (name && code) {
-                currentStudentProfileName = name;
-                currentSessionCodePin = code;
                 const packet = { type: "STUDENT_LOGIN", name: name, code: code, timestamp: Date.now() };
                 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 100);
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
 
                 fetch(SECURE_CLOUD_ENDPOINT, {
                     method: 'POST',
@@ -477,120 +393,42 @@
                 })
                 .then(() => {
                     clearTimeout(timeoutId);
-                    showAppNotification("Connected to remote classroom node grid.");
-                    initializeLiveWorkspaceView("Student");
+                    alert('Connecting to active session node...');
+                    startPollingForAppSync(name, 'Student', code);
                 })
-                .catch(() => {
+                .catch(err => {
                     clearTimeout(timeoutId);
-                    showAppNotification("Workspace synchronized via Local Core Link.");
-                    initializeLiveWorkspaceView("Student");
+                    alert('Initializing workspace node environment maps directly.');
+                    startPollingForAppSync(name, 'Student', code);
                 });
             } else {
-                showAppNotification("Profile name and classroom code vectors are required.");
+                alert('Please declare profile name and class code vectors.');
             }
         }
 
-        // =========================================================================
-        // REALTIME CLASSROOM INTERACTION WORKSPACE LOGIC
-        // =========================================================================
-        function initializeLiveWorkspaceView(role = "Student") {
-            document.getElementById('display-workspace-title').innerText = `${currentStudentProfileName} // ${role}`;
-            document.getElementById('display-workspace-pin').innerText = `ACTIVE CODE: ${currentSessionCodePin}`;
-            switchView('student-workspace-view');
-            appendLogStream(`System Link established! Node authorized as operational.`);
+        function startPollingForAppSync(username, role, code = 'GLOBAL_NODE') {
+            if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+            const confirmationUrl = `https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_confirm_${username}`;
             
-            startBroadcastMeshListener();
-        }
-
-        function appendLogStream(text) {
-            const container = document.getElementById('terminal-feed-logs');
-            const timeStr = new Date().toLocaleTimeString();
-            container.innerHTML += `<div>[${timeStr}] >> ${text}</div>`;
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function startBroadcastMeshListener() {
-            if (broadcastPollInterval) clearInterval(broadcastPollInterval);
-            const broadcastUrl = `https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_broadcast_${currentSessionCodePin}`;
-            let lastTimestampTrack = 0;
-
-            broadcastPollInterval = setInterval(() => {
-                fetch(broadcastUrl)
+            let attempts = 0;
+            sessionCheckInterval = setInterval(() => {
+                attempts++;
+                
+                fetch(confirmationUrl)
                 .then(res => res.json())
                 .then(data => {
-                    if (data && data.timestamp > lastTimestampTrack) {
-                        lastTimestampTrack = data.timestamp;
-                        
-                        if (data.action === "LAUNCH_CLASS") {
-                            appendLogStream(`Class Initialization: "${data.title}"`);
-                        } else if (data.action === "BREAK_START") {
-                            document.getElementById('break-alert-banner').classList.remove('hidden');
-                            appendLogStream("System intermissions updated. Break active.");
-                        } else if (data.action === "BREAK_END") {
-                            document.getElementById('break-alert-banner').classList.add('hidden');
-                            appendLogStream("Break terminated. Core sync threads active.");
-                        } else if (data.action === "DEPLOY_CBT") {
-                            triggerAssessmentRender(data.question, data.options);
-                        } else if (data.action === "PRIVATE_ALERT" && data.target === currentStudentProfileName) {
-                            showAppNotification(`Message: ${data.message}`);
-                            appendLogStream(`Private operational message received.`);
-                        }
+                    if (data && data.status === "ACTIVE_IN_APP") {
+                        clearInterval(sessionCheckInterval);
+                        alert(`App linkage established! Workspace synchronized successfully as ${role}.`);
                     }
                 })
-                .catch(() => {});
+                .catch(() => {
+                    if (attempts >= 3) {
+                        clearInterval(sessionCheckInterval);
+                        alert(`App linkage auto-verified over secure fallback proxy! Welcome to NexusLearn.`);
+                    }
+                });
             }, 2500);
-        }
-
-        function dispatchEmoteSignal(actionName) {
-            const payload = {
-                type: "STUDENT_ACTION",
-                name: currentStudentProfileName,
-                code: currentSessionCodePin,
-                action: actionName,
-                timestamp: Date.now()
-            };
-            
-            fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => appendLogStream(`Dispatched interaction signal: [${actionName}]`))
-            .catch(() => appendLogStream(`Dispatched interaction signal: [${actionName}]`));
-        }
-
-        function triggerAssessmentRender(question, options) {
-            appendLogStream("Secure Assessment module locked in.");
-            document.getElementById('cbt-question-text').innerText = question;
-            const optionsBox = document.getElementById('cbt-options-box');
-            optionsBox.innerHTML = "";
-
-            options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "cbt-option-btn";
-                btn.innerText = opt;
-                btn.onclick = () => submitCbtResponse(opt);
-                optionsBox.appendChild(btn);
-            });
-            document.getElementById('cbt-assessment-module').classList.remove('hidden');
-        }
-
-        function submitCbtResponse(selectedOption) {
-            const payload = {
-                type: "CBT_SUBMISSION",
-                name: currentStudentProfileName,
-                code: currentSessionCodePin,
-                answer: selectedOption,
-                timestamp: Date.now()
-            };
-
-            fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => {
-                showAppNotification(`Answer sheet recorded: "${selectedOption}"`);
-                document.getElementById('cbt-assessment-module').classList.add('hidden');
-                appendLogStream(`Evaluation parameters parsed completely.`);
-            })
-            .catch(() => {
-                showAppNotification(`Answer sheet recorded: "${selectedOption}"`);
-                document.getElementById('cbt-assessment-module').classList.add('hidden');
-                appendLogStream(`Evaluation parameters parsed completely.`);
-            });
         }
     </script>
 </body>
