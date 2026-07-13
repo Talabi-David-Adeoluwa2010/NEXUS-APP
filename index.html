@@ -148,7 +148,7 @@
            STAGE 2: SIGN-IN PORTAL STYLES (HIDDEN AT START)
            ========================================== */
         #signInPortal {
-            display: flex;
+            display: none;
             opacity: 0;
             visibility: hidden;
             width: 90%;
@@ -353,7 +353,7 @@
     <div id="loadingScreen">
         <div class="loading-container">
             <div class="logo-container">
-                <img src="/static/IMG_5615.jpeg" alt="NexusLearn Logo" class="logo-image">
+                <img src="/static/image.png" alt="NexusLearn Logo" class="logo-image">
             </div>
 
             <h1 class="app-name">NexusLearn</h1>
@@ -373,7 +373,7 @@
     <div id="signInPortal">
         <div class="info-side">
             <div class="logo-box">
-                <img src="/static/IMG_5615.jpeg" alt="NexusLearn Logo">
+                <img src="/static/image.png" alt="NexusLearn Logo">
             </div>
             <div class="about-text-wrapper">
                 <h2>NexusLearn Portal</h2>
@@ -455,6 +455,9 @@
             // Hide loading elements
             loadingScreen.style.opacity = '0';
             loadingScreen.style.visibility = 'hidden';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
             mobileFounderTag.style.display = 'none'; // Prevent duplicating founder text
 
             // Reveal the login system
