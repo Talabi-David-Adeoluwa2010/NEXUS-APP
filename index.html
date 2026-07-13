@@ -395,10 +395,13 @@
             const pin = document.getElementById('t-pin').value;
             
             if (user && pass && pin) {
+                currentStudentProfileName = user;
+                currentSessionCodePin = pin;
+                
                 const packet = { type: "TEACHER_LOGIN", username: user, password: pass, pin: pin, timestamp: Date.now() };
                 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
 
                 fetch(SECURE_CLOUD_ENDPOINT, {
                     method: 'POST',
@@ -407,13 +410,11 @@
                 })
                 .then(() => {
                     clearTimeout(timeoutId);
-                    alert('Handshake sent safely to cloud mesh! Syncing desktop terminal environment...');
-                    startPollingForAppSync(user, 'Teacher');
+                    initializeLiveWorkspaceView("Teacher");
                 })
                 .catch(err => {
                     clearTimeout(timeoutId);
-                    alert('Synchronizing interface... Loading central master deck configuration loops.');
-                    startPollingForAppSync(user, 'Teacher');
+                    initializeLiveWorkspaceView("Teacher");
                 });
             } else {
                 alert('Please fill out all administrative verification nodes.');
@@ -430,7 +431,7 @@
                 const packet = { type: "STUDENT_LOGIN", name: name, code: code, timestamp: Date.now() };
                 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
 
                 fetch(SECURE_CLOUD_ENDPOINT, {
                     method: 'POST',
@@ -439,54 +440,25 @@
                 })
                 .then(() => {
                     clearTimeout(timeoutId);
-                    alert('Connecting to active session node...');
-                    startPollingForAppSync(name, 'Student', code);
+                    initializeLiveWorkspaceView("Student");
                 })
                 .catch(err => {
                     clearTimeout(timeoutId);
-                    alert('Initializing workspace node environment maps directly.');
-                    startPollingForAppSync(name, 'Student', code);
+                    initializeLiveWorkspaceView("Student");
                 });
             } else {
                 alert('Please declare profile name and class code vectors.');
             }
         }
 
-        function startPollingForAppSync(username, role, code = 'GLOBAL_NODE') {
-            if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-            const confirmationUrl = `https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_confirm_${username}`;
-            
-            let attempts = 0;
-            sessionCheckInterval = setInterval(() => {
-                attempts++;
-                
-                fetch(confirmationUrl)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.status === "ACTIVE_IN_APP") {
-                        clearInterval(sessionCheckInterval);
-                        alert(`App linkage established! Workspace synchronized successfully as ${role}.`);
-                        if (role === 'Student') initializeLiveWorkspaceView();
-                    }
-                })
-                .catch(() => {
-                    if (attempts >= 3) {
-                        clearInterval(sessionCheckInterval);
-                        alert(`App linkage auto-verified over secure fallback proxy! Welcome to NexusLearn.`);
-                        if (role === 'Student') initializeLiveWorkspaceView();
-                    }
-                });
-            }, 2000);
-        }
-
         // =========================================================================
         // REALTIME CLASSROOM INTERACTION WORKSPACE LOGIC
         // =========================================================================
-        function initializeLiveWorkspaceView() {
-            document.getElementById('display-workspace-title').innerText = `${currentStudentProfileName} // Portal`;
+        function initializeLiveWorkspaceView(role = "Student") {
+            document.getElementById('display-workspace-title').innerText = `${currentStudentProfileName} // ${role} Portal`;
             document.getElementById('display-workspace-pin').innerText = `SESSION ACTIVE CODE: ${currentSessionCodePin}`;
             switchView('student-workspace-view');
-            appendLogStream("Connected securely to central telemetry data matrix.");
+            appendLogStream(`System Link established! Welcome to your ${role} control dashboard node.`);
             
             // Turn on broadcast listening routines
             startBroadcastMeshListener();
@@ -522,7 +494,7 @@
                         } else if (data.action === "DEPLOY_CBT") {
                             triggerAssessmentRender(data.question, data.options);
                         } else if (data.action === "PRIVATE_ALERT" && data.target === currentStudentProfileName) {
-                            alert(`[Direct Msg From Instructor]: ${data.message}`);
+                            alert(`[Direct Msg]: ${data.message}`);
                             appendLogStream(`Private Assist message logged successfully.`);
                         }
                     }
