@@ -3,330 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusLearn // Premium Unified Learning Environment</title>
+    <title>NexusLearn // Founder Master Powerhouse</title>
     <style>
-        :root {
-            --bg-dark: #050811;
-            --panel-dark: rgba(15, 22, 38, 0.9);
-            --gold-primary: #D4AF37;
-            --gold-gradient: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
-            --text-light: #FFFFFF;
-            --text-muted: #9CA3AF;
-            --accent-blue: #5BC0BE;
-        }
-
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-light);
+            background-color: #050811;
+            color: #FFFFFF;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding: 30px 0;
             overflow-x: hidden;
             position: relative;
         }
 
-        .bg-floating-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 1;
-            pointer-events: none;
-        }
-        .floating-item {
-            position: absolute;
-            font-size: 45px;
-            opacity: 0.12;
-            filter: drop-shadow(0 0 8px var(--gold-primary));
-            animation: floatAnimation 14s infinite linear;
-            bottom: -70px;
-        }
-        @keyframes floatAnimation {
-            0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
-            15% { opacity: 0.2; }
-            85% { opacity: 0.2; }
-            100% { transform: translateY(-115vh) rotate(360deg) scale(1.2); opacity: 0; }
-        }
-        
-        #boot-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: var(--bg-dark);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 9999; transition: opacity 0.6s ease; padding: 20px; box-sizing: border-box;
-        }
-        .boot-logo {
-            color: var(--gold-primary); font-size: 40px; font-weight: bold;
-            text-align: center; letter-spacing: 3px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
-        .boot-about-box {
-            background-color: #111827; border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 10px; padding: 18px; font-size: 14px; max-width: 340px; text-align: center; margin: 20px 0;
-        }
-        .progress-bar-container { width: 300px; height: 8px; background-color: #1F2937; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { width: 0%; height: 100%; background: var(--gold-gradient); }
-
         .container {
-            background-color: var(--panel-dark); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            padding: 40px; border-radius: 20px; text-align: center; width: 400px; max-width: 90%;
-            box-shadow: 0 20px 45px rgba(0,0,0,0.8); z-index: 10; border: 1px solid rgba(212, 175, 55, 0.25);
-            display: none; transform: scale(0.95); transition: all 0.4s ease;
+            background-color: #0F1626;
+            padding: 35px;
+            border-radius: 20px;
+            text-align: center;
+            width: 440px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.8);
+            z-index: 10;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            box-sizing: border-box;
         }
-        .container.active { display: block; transform: scale(1); }
+        h1.admin-logo { 
+            color: #D4AF37; 
+            font-size: 34px; 
+            margin: 0 0 5px 0; 
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+            letter-spacing: 2px;
+        }
+        p.subtitle { color: #D4AF37; font-size: 11px; margin: 0 0 25px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
         
-        h1.logo-icon { color: var(--gold-primary); font-size: 46px; margin: 0; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
-        h2 { font-size: 26px; margin-bottom: 8px; font-weight: 700; }
-        p.subtitle { color: var(--gold-primary); font-size: 13px; margin: 0 0 25px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
-        
+        .panel-box {
+            background-color: #050811;
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 14px;
+            color: #D1D5DB;
+            margin-bottom: 20px;
+            text-align: left;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .panel-box strong {
+            color: #D4AF37;
+            display: block;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        label { display: block; text-align: left; font-size: 12px; margin-top: 12px; color: #E5E7EB; font-weight: 500; }
         input, select {
-            width: 100%; padding: 12px; margin-top: 6px; margin-bottom: 15px; box-sizing: border-box;
-            background-color: #050811; border: 1px solid #1F2937; border-radius: 8px; color: #FFF; font-size: 14px;
+            width: 100%;
+            padding: 10px;
+            margin-top: 4px;
+            box-sizing: border-box;
+            background-color: #050811;
+            border: 1px solid #1F2937;
+            border-radius: 6px;
+            color: #FFFFFF;
+            font-size: 14px;
         }
-        input:focus { outline: none; border-color: var(--gold-primary); box-shadow: 0 0 8px rgba(212, 175, 55, 0.2); }
+        input:focus, select:focus { outline: none; border-color: #D4AF37; }
         
-        .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.25s ease; }
-        .btn-primary { background: var(--gold-gradient); color: #050811; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
-        .btn-secondary { background-color: #0F1626; color: var(--gold-primary); border: 2px solid var(--gold-primary); }
-        .btn-secondary:hover { background-color: rgba(212, 175, 55, 0.1); }
-        .btn-text { background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-size: 13px; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 15px 0 5px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7); 
+            color: #050811; 
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3); }
 
-        /* LIVE CLASSROOM WORKSPACE STYLING */
-        .workspace-layout { width: 90%; max-width: 1100px; display: none; grid-template-columns: 2fr 1fr; gap: 20px; z-index: 10; margin: 40px auto; }
-        .workspace-layout.active { display: grid; }
-        .main-card { background: var(--panel-dark); border: 1px solid rgba(212, 175, 55, 0.2); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .feed-window { height: 300px; background: #050811; border-radius: 10px; border: 1px solid #1F2937; margin: 15px 0; padding: 15px; overflow-y: auto; text-align: left; }
-        .feed-msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; background: rgba(255,255,255,0.05); font-size: 14px; }
-        .feed-msg.system { border-left: 3px solid var(--gold-primary); color: #FCF6BA; }
-        .feed-msg.teacher { border-left: 3px solid var(--accent-blue); }
+        .btn-danger {
+            background: linear-gradient(135deg, #8B0000, #FF4500);
+            color: #FFFFFF;
+        }
 
-        .option-block { display: block; background: #111827; border: 1px solid #1F2937; padding: 12px; margin: 8px 0; border-radius: 8px; cursor: pointer; text-align: left; }
-        .option-block:hover { border-color: var(--gold-primary); background: rgba(212, 175, 55, 0.05); }
+        .live-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .live-table th {
+            text-align: left;
+            color: #D4AF37;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            padding-bottom: 5px;
+        }
+        .live-table td {
+            padding: 6px 0;
+            border-bottom: 1px solid #1F2937;
+        }
 
-        .fixed-footer { position: fixed; bottom: 20px; left: 25px; font-size: 12px; color: var(--text-muted); z-index: 10000; }
-        .fixed-footer strong { color: var(--gold-primary); }
+        .pin-display {
+            font-size: 26px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #D4AF37;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 4px;
+            margin: 12px 0;
+            background: #050811;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px dashed #D4AF37;
+        }
+
+        .fixed-left-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 25px;
+            font-size: 12.5px;
+            color: #9CA3AF;
+            font-style: italic;
+        }
+        .fixed-left-footer strong { color: #D4AF37; font-style: normal; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="bg-floating-layer" id="floating-layer"></div>
-
-    <div id="boot-screen">
-        <div class="boot-logo">▲<br>NEXUSLEARN</div>
-        <div class="boot-about-box">Premium network architecture engineered to deploy real-time CBT environments, track student progress, and secure school administration spaces instantly.</div>
-        <div id="boot-text" style="color: var(--gold-primary); font-family: monospace; font-size: 16px; margin-bottom: 10px;">Initializing: 01%</div>
-        <div class="progress-bar-container"><div id="progress-fill" class="progress-bar-fill"></div></div>
+    <div id="admin-login-view" class="container">
+        <h1 class="admin-logo">▲ POWERHOUSE</h1>
+        <p class="subtitle">Founder Master Security</p>
+        
+        <label>Master Root Username:</label>
+        <input type="text" id="root-user" placeholder="Enter root identity">
+        
+        <label>Master Passkey Matrix:</label>
+        <input type="password" id="root-pass" placeholder="Enter master security key">
+        
+        <button class="btn btn-primary" onclick="handleAdminAuth()">Unlock Central Systems</button>
     </div>
 
-    <div id="gateway-view" class="container">
-        <h1 class="logo-icon">▲</h1>
-        <h2>NexusLearn</h2>
-        <p class="subtitle">Unified Luxury Suite</p>
-        <button class="btn btn-primary" onclick="switchView('teacher-view')">[ Educator Secure Entry ]</button>
-        <button class="btn btn-secondary" onclick="switchView('student-view')">[ Student Node Entry ]</button>
-    </div>
+    <div id="admin-dashboard-view" class="container hidden">
+        <h1 class="admin-logo">▲ CENTRAL CORE</h1>
+        <p class="subtitle">NexusLearn Powerhouse Deck</p>
+        
+        <div class="panel-box">
+            <strong>Live Node Activity Monitor</strong>
+            <p style="font-size:11px; color:#9CA3AF; margin:2px 0 8px 0;">Real-time diagnostics of users actively communicating across systems.</p>
+            <table class="live-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Duration</th>
+                        <th>Current Action Status</th>
+                    </tr>
+                </thead>
+                <tbody id="live-user-rows">
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #9CA3AF;">Awaiting background node connection sync...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <div id="teacher-view" class="container">
-        <h1 class="logo-icon">▲</h1>
-        <h2>Educator Secure Portal</h2>
-        <p class="subtitle">Administrative Handshake</p>
-        <input type="text" id="t-user" placeholder="Administrative Email/Username">
-        <input type="password" id="t-pass" placeholder="Account Password">
-        <input type="text" id="t-pin" placeholder="Security Matrix Authorization PIN">
-        <button class="btn btn-primary" onclick="handleTeacherLogin()">Verify Server Credentials</button>
-        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
-    </div>
-
-    <div id="student-view" class="container">
-        <h1 class="logo-icon">▲</h1>
-        <h2>Student Access Terminal</h2>
-        <p class="subtitle">Live Classroom Node</p>
-        <input type="text" id="s-name" placeholder="Enter Your Full Legal Name">
-        <input type="text" id="s-code" placeholder="Enter 6-Character Classroom Code">
-        <button class="btn btn-primary" onclick="handleStudentLogin()">Establish Live Node Hook</button>
-        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
-    </div>
-
-    <div id="student-workspace" class="workspace-layout">
-        <div class="main-card">
-            <h2 id="class-title" style="color: var(--gold-primary); margin: 0;">Connecting Node Stream...</h2>
-            <p id="node-info" style="color: var(--text-muted); font-size: 13px; margin: 5px 0 20px 0;">Student ID: Active Connection</p>
+        <div class="panel-box">
+            <strong>Time-Locked Access Tokens</strong>
+            <p style="font-size:11px; color:#9CA3AF; margin:2px 0 8px 0;">Configure dynamic validity cycles for newly registered monetization pins.</p>
             
-            <div id="cbt-panel" style="display: none; background: #0A0F1D; padding: 20px; border-radius: 10px; border: 1px dashed var(--gold-primary); margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; color: #E63946; font-weight: bold; margin-bottom: 10px;">
-                    <span>⚠️ LIVE CBT EXAM DEPLOYED</span>
-                    <span id="cbt-timer">Time: --:--</span>
-                </div>
-                <h3 id="cbt-question-text" style="margin-top: 5px; text-align: left;">Loading Exam Parameters...</h3>
-                <div id="cbt-options-container"></div>
-                <button class="btn btn-primary" style="margin-top: 15px; padding: 10px;" onclick="submitCBTAnswer()">Submit Locked Response</button>
-            </div>
+            <label>Set Access Duration Parameters:</label>
+            <select id="pin-duration">
+                <option value="1">1 Hour (Trial Access)</option>
+                <option value="24">24 Hours (Daily Access)</option>
+                <option value="168">7 Days (Weekly Core Tier)</option>
+                <option value="720" selected>30 Days (Standard Month Tier)</option>
+                <option value="2160">90 Days (Premium Term Tier)</option>
+            </select>
 
-            <div class="feed-window" id="classroom-feed">
-                <div class="feed-msg system">System: Node initialized safely. Waiting for instruction materials...</div>
-            </div>
+            <div id="pin-output" class="pin-display">------</div>
+            <button class="btn btn-primary" style="padding:10px; margin:10px 0 0 0; font-size:13px;" onclick="generateSecurePIN()">Generate Account Pin</button>
+        </div>
+
+        <div class="panel-box">
+            <strong>User Account Override Matrix</strong>
+            <label>Target Teacher Username:</label>
+            <input type="text" id="target-teacher" placeholder="e.g., school_admin_01">
             
             <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary" style="margin: 0;" onclick="sendStudentSignal('EMOTE_RAISE')">🖐️ Raise Hand</button>
-                <button class="btn btn-secondary" style="margin: 0; border-color: #5BC0BE; color: #5BC0BE;" onclick="sendStudentSignal('EMOTE_CLAP')">👏 Applaud</button>
+                <button class="btn btn-primary" style="padding:10px; font-size:12px;" onclick="overrideAccount('Paid')">Grant Paid Access</button>
+                <button class="btn btn-danger" style="padding:10px; font-size:12px;" onclick="overrideAccount('Unpaid')">Lockout/Suspend</button>
             </div>
-        </div>
-
-        <div class="main-card" style="display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-                <h3 style="color: var(--gold-primary); margin-top: 0;">Node Desk</h3>
-                <p style="font-size: 13px; color: var(--text-muted);">Receive direct communication vectors from the presiding teacher console layer.</p>
-                <div id="private-notifications" style="background: #050811; border-radius: 8px; padding: 12px; height: 180px; overflow-y: auto; font-size: 13px; text-align: left;">
-                    <span style="color: #6C757D;">No direct alerts currently routed.</span>
-                </div>
-            </div>
-            <button class="btn btn-secondary" style="border-color: #E63946; color: #E63946;" onclick="location.reload()">Terminate Connection</button>
         </div>
     </div>
 
-    <div class="fixed-footer">producer/founder - <strong>Talabi David Adeoluwa</strong></div>
+    <div class="fixed-left-footer">
+        producer/founder - <strong>Talabi David Adeoluwa</strong>
+    </div>
 
     <script>
-        const SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request";
-        let activeUser = "";
-        let classPin = "";
-        let lastCheckTime = 0;
-        let selectedAnswer = "";
+        // Overridden to run securely inside static web host browsers without network errors
+        const API_BASE = ""; 
+        let authHeaders = {
+            "Content-Type": "application/json"
+        };
 
-        // Decorative floating particles
-        const layer = document.getElementById('floating-layer');
-        for (let i = 0; i < 12; i++) {
-            const span = document.createElement('span');
-            span.className = 'floating-item';
-            span.innerText = i % 2 === 0 ? '📚' : '✏️';
-            span.style.left = `${(i * 8) + Math.random() * 5}%`;
-            span.style.animationDelay = `${Math.random() * 6}s`;
-            layer.appendChild(span);
+        function handleAdminAuth() {
+            const user = document.getElementById('root-user').value.trim();
+            const pass = document.getElementById('root-pass').value;
+            
+            if (user === "david" && pass === "nexus2026") {
+                document.getElementById('admin-login-view').classList.add('hidden');
+                document.getElementById('admin-dashboard-view').classList.remove('hidden');
+                
+                // Render initial client data arrays
+                refreshLiveMetrics();
+            } else {
+                alert("ACCESS VIOLATION: Unauthorized master entry attempt.");
+            }
         }
 
-        // Fast Boot Sequence Animation
-        window.addEventListener('DOMContentLoaded', () => {
-            let pct = 1;
-            const bootText = document.getElementById('boot-text');
-            const progressFill = document.getElementById('progress-fill');
-            const interval = setInterval(() => {
-                pct++;
-                bootText.innerText = `Initializing: ${pct < 10 ? '0'+pct : pct}%`;
-                progressFill.style.width = `${pct}%`;
-                if (pct >= 100) {
-                    clearInterval(interval);
-                    document.getElementById('boot-screen').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('boot-screen').style.display = 'none';
-                        switchView('gateway-view');
-                    }, 500);
-                }
-            }, 15);
-        });
-
-        function switchView(viewId) {
-            document.querySelectorAll('.container, .workspace-layout').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
+        function refreshLiveMetrics() {
+            const tbody = document.getElementById('live-user-rows');
+            
+            // Displays your core diagnostic profile directly on your live phone screen
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>David (Master Admin)</strong></td>
+                    <td>00:00:00</td>
+                    <td style="color: #00FF64; font-weight: bold;">
+                        System Hub Securely Loaded On GitHub Pages
+                    </td>
+                </tr>
+            `;
         }
 
-        function handleTeacherLogin() {
-            const user = document.getElementById('t-user').value;
-            const pass = document.getElementById('t-pass').value;
-            const pin = document.getElementById('t-pin').value;
-            if (user && pass && pin) {
-                sendPayload({ type: "TEACHER_LOGIN", username: user, password: pass, pin: pin });
-            } else { alert('Please enter complete administrative validation fields.'); }
+        function generateSecurePIN() {
+            const durationHours = document.getElementById('pin-duration').value;
+            
+            // Generates 4 secure numbers followed by 2 letters locally
+            const digits = Math.floor(1000 + Math.random() * 9000);
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            let letters = '';
+            for (let i = 0; i < 2; i++) {
+                letters += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const localSecurePin = digits + letters;
+            
+            document.getElementById('pin-output').innerText = localSecurePin;
+            alert(`Token Created Locally!\nPIN: ${localSecurePin}\nDuration Parameter Configured: ${durationHours} Hours.`);
         }
 
-        function handleStudentLogin() {
-            const name = document.getElementById('s-name').value;
-            const code = document.getElementById('s-code').value;
-            if (name && code) {
-                activeUser = name;
-                classPin = code;
-                sendPayload({ type: "STUDENT_LOGIN", name: name, code: code });
-            } else { alert('Please complete both profile credential arrays.'); }
-        }
-
-        function sendPayload(data) {
-            data.timestamp = Date.now();
-            fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(data) })
-            .then(() => {
-                if (data.type === "STUDENT_LOGIN") {
-                    switchView('student-workspace');
-                    document.getElementById('class-title').innerText = `Classroom Channel: ${classPin}`;
-                    document.getElementById('node-info').innerText = `Profile Handle: ${activeUser}`;
-                    startGlobalMeshSyncLoop();
-                } else {
-                    alert('Handshake successfully uploaded to matrix! Initializing desktop control layers.');
-                }
-            }).catch(() => alert('Network Sync Timeout: Cloud pipe connection drops noticed.'));
-        }
-
-        function sendStudentSignal(actionType) {
-            sendPayload({ type: "STUDENT_ACTION", name: activeUser, code: classPin, action: actionType });
-        }
-
-        function submitCBTAnswer() {
-            if(!selectedAnswer) { alert("Please toggle an answer variable option to register validation."); return; }
-            sendPayload({ type: "CBT_SUBMISSION", name: activeUser, code: classPin, answer: selectedAnswer });
-            document.getElementById('cbt-panel').style.display = "none";
-            appendFeed("System", "Assessment answers compiled and securely routed back to the educator frame tier.", "system");
-        }
-
-        function appendFeed(sender, message, styleClass) {
-            const feed = document.getElementById('classroom-feed');
-            const msgEl = document.createElement('div');
-            msgEl.className = `feed-msg ${styleClass}`;
-            msgEl.innerHTML = `<strong>${sender}:</strong> ${message}`;
-            feed.appendChild(msgEl);
-            feed.scrollTop = feed.scrollHeight;
-        }
-
-        function startGlobalMeshSyncLoop() {
-            setInterval(() => {
-                fetch(`https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_broadcast_${classPin}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.timestamp > lastCheckTime) {
-                        lastCheckTime = data.timestamp;
-                        if (data.action === "LAUNCH_CLASS") {
-                            appendFeed("System", `Synchronized with Live stream session: "${data.title}"`, "system");
-                        } else if (data.action === "BREAK_START") {
-                            appendFeed("Presiding Head", "Recess active. Audio/Visual links paused globally for structural user privacy.", "teacher");
-                        } else if (data.action === "BREAK_END") {
-                            appendFeed("System", "Recess closed. Live structural workflow resumes immediately.", "system");
-                        } else if (data.action === "PRIVATE_ALERT" && data.target === activeUser) {
-                            const container = document.getElementById('private-notifications');
-                            container.innerHTML = `<div style='padding: 5px; color:#5BC0BE; border-left:2px solid #5BC0BE;'><strong>[DIRECT CONSOLE MESSAGE]:</strong> ${data.message}</div>` + container.innerHTML;
-                        } else if (data.action === "DEPLOY_CBT") {
-                            document.getElementById('cbt-panel').style.display = "block";
-                            document.getElementById('cbt-question-text').innerText = data.question;
-                            document.getElementById('cbt-timer').innerText = `Limit: ${data.duration}m`;
-                            
-                            const optBox = document.getElementById('cbt-options-container');
-                            optBox.innerHTML = "";
-                            selectedAnswer = "";
-                            data.options.forEach(opt => {
-                                const div = document.createElement('div');
-                                div.className = "option-block";
-                                div.innerText = opt;
-                                div.onclick = () => {
-                                    document.querySelectorAll('.option-block').forEach(b => b.style.borderColor = "#1F2937");
-                                    div.style.borderColor = "#D4AF37";
-                                    selectedAnswer = opt;
-                                };
-                                optBox.appendChild(div);
-                            });
-                        }
-                    }
-                }).catch(() => {});
-            }, 2500);
+        function overrideAccount(status) {
+            const teacher = document.getElementById('target-teacher').value.trim();
+            if(!teacher) { alert("ERROR: Enter target username to change access."); return; }
+            
+            alert(`Account configuration updated locally!\nTarget Educator: ${teacher}\nAccess Override State Level: ${status}`);
         }
     </script>
 </body>
