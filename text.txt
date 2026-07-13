@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, filedialog
 import sqlite3
 import random
 import string
@@ -9,7 +9,6 @@ import threading
 import json
 import os
 
-# Attempt to import requests for live web synchronization channel routing
 try:
     import requests
 except ImportError:
@@ -18,16 +17,14 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
     import requests
 
-# =========================================================================
-# CENTRAL SECURE PUBLIC CLOUD LINKAGE CHANNEL (ZERO LOCAL SERVER REQUIRED)
-# =========================================================================
 SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request"
+NOTES_JSON_FILE = "nexus_notes.json"
 
 class NexusLearnUnifiedApp:
     def __init__(self, root):
         self.root = root
         self.root.title("NexusLearn // Unified Learning Environment")
-        self.root.geometry("1100x720")
+        self.root.geometry("1200x780")
         self.root.configure(bg="#0B132B")
         
         # State tracking matrices
@@ -38,42 +35,38 @@ class NexusLearnUnifiedApp:
         self.break_time_left = 600
         self.last_processed_time = int(time.time() * 1000)
         
-        # New Feature State Matrix Additions
         self.max_students_limit = 40
         self.is_audio_muted = False
         self.is_video_blocked = False
-        self.student_mute_states = {} # Tracks targeted block overrides
+        self.student_mute_states = {}
+        self.current_playing_track = ""
         
-        # Central Database Initialization & Schema Checks
         self.init_shared_database()
+        self.ensure_json_notes_exists()
         
-        # Treeview styling maps
         self.style = ttk.Style()
         self.style.theme_use("clam")
         self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=28)
         self.style.configure("Treeview.Heading", background="#0B132B", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
         self.style.map("Treeview", background=[('selected', '#5BC0BE')], foreground=[('selected', '#0B132B')])
         
-        # Start pure HTTPS cloud listening monitor loop to track GitHub front-end queues
         threading.Thread(target=self.start_cloud_polling_engine, daemon=True).start()
-        
-        # Launch High-Tech Boot Canvas Sequence
         self.run_fast_loading_canvas()
 
-    # =========================================================================
-    # PURE CLOUD LINKAGE BRIDGE (NO WEBSOCKETS OR FLASK BACKENDS NEEDED)
-    # =========================================================================
+    def ensure_json_notes_exists(self):
+        if not os.path.exists(NOTES_JSON_FILE):
+            with open(NOTES_JSON_FILE, "w") as f:
+                json.dump({}, f)
+
     def start_cloud_polling_engine(self):
-        """Listens directly to the HTTPS secure cloud data mesh for web inputs."""
         while True:
-            time.sleep(2.0)  # Poll comfortably every 2 seconds
+            time.sleep(2.0)
             try:
                 response = requests.get(SECURE_CLOUD_ENDPOINT, timeout=3)
                 if response.status_code == 200 and response.text.strip():
                     request_data = response.json()
                     req_time = request_data.get("timestamp", 0)
                     
-                    # Prevent processing outdated commands
                     if req_time > self.last_processed_time:
                         self.last_processed_time = req_time
                         req_type = request_data.get("type")
@@ -87,7 +80,7 @@ class NexusLearnUnifiedApp:
                         elif req_type == "CBT_SUBMISSION" and request_data.get("code") == self.active_session_pin:
                             self.root.after(0, self.process_web_cbt_submission, request_data.get("name"), request_data.get("answer"))
             except Exception:
-                pass  # Safely bypass brief web network dropped frames
+                pass
 
     def handle_web_teacher_auth(self, data):
         self.student_name = data.get("username")
@@ -98,12 +91,9 @@ class NexusLearnUnifiedApp:
 
     def handle_web_student_auth(self, data):
         target_code = data.get("code")
-        
-        # Enforce classroom seat restrictions capped to 40 nodes max
         if hasattr(self, 't_roster') and len(self.t_roster.get_children()) >= self.max_students_limit:
             return
 
-        # Route logic based on active role matching profile frames
         if hasattr(self, 't_roster') and self.t_roster.winfo_exists() and target_code == self.active_session_pin:
             self.root.after(0, self.register_live_student_node, data.get("name"))
         elif not hasattr(self, 't_roster'):
@@ -114,7 +104,6 @@ class NexusLearnUnifiedApp:
         self.confirm_handshake_to_cloud(data.get("name"))
 
     def process_web_student_action(self, name, action):
-        """Processes emote highlights pushed from active web student instances directly onto teacher panel rows."""
         if hasattr(self, 't_roster'):
             action_labels = {
                 "EMOTE_RAISE": "🖐️ Hand Raised (Awaiting Prompt)",
@@ -124,12 +113,10 @@ class NexusLearnUnifiedApp:
             self.register_live_student_node(name, status=mapped_text)
 
     def process_web_cbt_submission(self, name, answer):
-        """Grades incoming web assessment payloads and drops records directly inside teacher grid arrays."""
         if hasattr(self, 't_roster'):
             self.register_live_student_node(name, status="CBT Score Transmitted Securely", grade=f"Locked: {answer}")
 
     def confirm_handshake_to_cloud(self, username):
-        """Informs the static webpage that the desktop process successfully loaded."""
         def run():
             try:
                 confirm_url = f"https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_confirm_{username}"
@@ -139,7 +126,6 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=run, daemon=True).start()
 
     def push_global_broadcast(self, payload):
-        """Pushes data coordinates downstream into matching cloud targets for open web browser tabs."""
         def task():
             try:
                 payload["timestamp"] = int(time.time() * 1000)
@@ -149,7 +135,6 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=task, daemon=True).start()
 
     def register_live_student_node(self, name, status="Node Hook Established", grade="No Evaluation Records"):
-        """Inserts or updates rows within the real-time student activity tracking table."""
         if hasattr(self, 't_roster'):
             for item in self.t_roster.get_children():
                 if self.t_roster.item(item)['values'][0] == name:
@@ -226,9 +211,6 @@ class NexusLearnUnifiedApp:
         btn_student = tk.Button(self.gateway_frame, text="[ I am a Student ]", command=self.load_student_login, bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 12, "bold"), width=25, pady=10)
         btn_student.pack(pady=10)
 
-    # =========================================================================
-    # TEACHER PIPELINE MODULES
-    # =========================================================================
     def load_teacher_login(self):
         if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists():
             self.gateway_frame.destroy()
@@ -271,7 +253,6 @@ class NexusLearnUnifiedApp:
         time.sleep(10)
         self.root.after(0, self.build_teacher_home_hub)
 
-    # NEW ADVANCED FEATURE: HOMEPAGE PORTAL LAYER FOR TEACHERS
     def build_teacher_home_hub(self):
         if hasattr(self, 'intro_frame'): self.intro_frame.destroy()
         if hasattr(self, 'main_work') and self.main_work.winfo_exists(): self.main_work.destroy()
@@ -279,7 +260,6 @@ class NexusLearnUnifiedApp:
         self.home_hub_frame = tk.Frame(self.root, bg="#0B132B")
         self.home_hub_frame.pack(fill="both", expand=True)
         
-        # Upper Header Greeting
         tk.Label(self.home_hub_frame, text=f"Welcome Back, {self.student_name} // Hub Management", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#5BC0BE").pack(anchor="w", padx=20, pady=15)
         
         # Left Panel: Classroom Creation Matrix Setup
@@ -291,22 +271,51 @@ class NexusLearnUnifiedApp:
         self.ent_hub_cname.pack(fill="x", padx=15, pady=5)
         
         btn_hub_pin = tk.Button(class_frame, text="Generate Secure Access Key", command=self.hub_generate_pin, bg="#0B132B", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
-        btn_hub_pin.pack(pady=10)
+        btn_hub_pin.pack(pady=5)
         
         self.lbl_hub_pin = tk.Label(class_frame, text="INVITATION PIN: ----", font=("Courier", 13, "bold"), bg="#1C2541", fg="#FFB703")
         self.lbl_hub_pin.pack(pady=5)
+
+        # ADDED MUSIC PLAYBACK MATRIX CONTROLS
+        music_box = tk.LabelFrame(class_frame, text="Class Audio / Music Player", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 10, "bold"))
+        music_box.pack(fill="x", padx=15, pady=10)
+        
+        self.lbl_music_track = tk.Label(music_box, text="Track: No Track Loaded", bg="#1C2541", fg="#9CA3AF", font=("Helvetica", 9, "italic"))
+        self.lbl_music_track.pack(pady=2)
+        
+        btn_load_music = tk.Button(music_box, text="Import Audio File (.mp3/.wav)", command=self.hub_load_audio_file, bg="#0B132B", fg="#FFFFFF")
+        btn_load_music.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
+        
+        btn_play_music = tk.Button(music_box, text="▶ Play", command=self.hub_play_audio_mock, bg="#0B132B", fg="#5BC0BE")
+        btn_play_music.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        btn_stop_music = tk.Button(music_box, text="⏹ Stop", command=self.hub_stop_audio_mock, bg="#0B132B", fg="#E63946")
+        btn_stop_music.pack(side=tk.LEFT, padx=5, pady=5)
         
         btn_launch_workspace = tk.Button(class_frame, text="Initialize Streaming Environment", command=self.launch_classroom_from_hub, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"))
         class_frame.pack_propagate(False)
-        btn_launch_workspace.pack(side=tk.BOTTOM, fill="x", padx=15, pady=20)
+        btn_launch_workspace.pack(side=tk.BOTTOM, fill="x", padx=15, pady=15)
         
-        # Right Panel: Notepad and Image Extraction Pipeline Workspace
-        tools_frame = tk.LabelFrame(self.home_hub_frame, text="Lecture Notepad & OCR Image Extractor Tool", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 11, "bold"))
+        # Right Panel: Notepad and JSON Saving Pipeline
+        tools_frame = tk.LabelFrame(self.home_hub_frame, text="Notepad & Persistent Jottings Storage (.json)", bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 11, "bold"))
         tools_frame.pack(side=tk.RIGHT, fill="both", expand=True, padx=15, pady=10)
         
+        tk.Label(tools_frame, text="Note Identifier Key:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=10, pady=2)
+        self.ent_note_title = tk.Entry(tools_frame, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_note_title.pack(fill="x", padx=10, pady=2)
+        self.ent_note_title.insert(0, "Lecture_Segment_A")
+
         self.hub_notepad = tk.Text(tools_frame, bg="#0B132B", fg="#FFFFFF", insertbackground="white", font=("Courier", 10))
         self.hub_notepad.pack(fill="both", expand=True, padx=10, pady=10)
-        self.hub_notepad.insert(tk.END, "--- Lecture Draft Scratchpad ---\nType notes here or load an image to extract text directly into this document stream.")
+        
+        json_btn_panel = tk.Frame(tools_frame, bg="#1C2541")
+        json_btn_panel.pack(fill="x", padx=10, pady=5)
+        
+        btn_save_json = tk.Button(json_btn_panel, text="💾 Save to JSON", command=self.hub_save_note_to_json, bg="#0B132B", fg="#5BC0BE")
+        btn_save_json.pack(side=tk.LEFT, fill="x", expand=True, padx=2)
+        
+        btn_load_json = tk.Button(json_btn_panel, text="📂 Load from JSON", command=self.hub_load_note_from_json, bg="#0B132B", fg="#FFFFFF")
+        btn_load_json.pack(side=tk.LEFT, fill="x", expand=True, padx=2)
         
         btn_ocr = tk.Button(tools_frame, text="Import Image Note / Extract Text Vector", command=self.hub_extract_image_text, bg="#0B132B", fg="#FFFFFF")
         btn_ocr.pack(fill="x", padx=10, pady=5)
@@ -317,19 +326,53 @@ class NexusLearnUnifiedApp:
         self.active_session_pin = digits + letters
         self.lbl_hub_pin.config(text=f"INVITATION PIN: {self.active_session_pin}")
 
+    def hub_load_audio_file(self):
+        path = filedialog.askopenfilename(filetypes=[("Class Audio Track", "*.mp3 *.wav *.ogg")])
+        if path:
+            self.current_playing_track = os.path.basename(path)
+            self.lbl_music_track.config(text=f"Loaded: {self.current_playing_track}", fg="#5BC0BE")
+
+    def hub_play_audio_mock(self):
+        if self.current_playing_track:
+            self.lbl_music_track.config(text=f"🔊 Playing: {self.current_playing_track}", fg="#FFB703")
+
+    def hub_stop_audio_mock(self):
+        if self.current_playing_track:
+            self.lbl_music_track.config(text=f"Loaded: {self.current_playing_track}", fg="#5BC0BE")
+
+    def hub_save_note_to_json(self):
+        title = self.ent_note_title.get().strip() or "Untitled"
+        content = self.hub_notepad.get("1.0", tk.END).strip()
+        try:
+            with open(NOTES_JSON_FILE, "r") as f:
+                data = json.load(f)
+            data[title] = content
+            with open(NOTES_JSON_FILE, "w") as f:
+                json.dump(data, f, indent=4)
+        except Exception:
+            pass
+
+    def hub_load_note_from_json(self):
+        title = self.ent_note_title.get().strip()
+        try:
+            with open(NOTES_JSON_FILE, "r") as f:
+                data = json.load(f)
+            if title in data:
+                self.hub_notepad.delete("1.0", tk.END)
+                self.hub_notepad.insert(tk.END, data[title])
+        except Exception:
+            pass
+
     def hub_extract_image_text(self):
         path = filedialog.askopenfilename(filetypes=[("Image Components", "*.png *.jpg *.jpeg")])
         if path:
             filename = os.path.basename(path)
-            # Simulated programmatic text processing abstraction matching file parsing rules
             extracted_words = f"\n\n[Extracted Vectors from Document Frame: {filename}]\nTopic: Advanced Technical Lecture Segment\nContent Module Sample: Unified Sync Node Active Parameters."
             self.hub_notepad.insert(tk.END, extracted_words)
-            messagebox.showinfo("OCR Pipeline Engine", "Media metadata processed. Structural text elements dropped cleanly into notepad layer.")
 
     def launch_classroom_from_hub(self):
         self.current_class_name = self.ent_hub_cname.get().strip()
         if not self.current_class_name or not self.active_session_pin:
-            messagebox.showwarning("Prerequisite Frame Missing", "Please enter a valid title entry and map your structural code matrix grid.")
             return
         self.home_hub_frame.destroy()
         self.build_teacher_workspace()
@@ -366,7 +409,6 @@ class NexusLearnUnifiedApp:
         btn_t_exam = tk.Button(left_p, text="Deploy Assessment Module", command=self.teacher_open_exam, bg="#1C2541", fg="#FFFFFF")
         btn_t_exam.pack(pady=5, fill="x", padx=10)
 
-        # NEW AV MANAGEMENT PORTAL INTEGRATION
         av_box = tk.LabelFrame(left_p, text="Live Classroom AV Matrix Override", bg="#1C2541", fg="#5BC0BE")
         av_box.pack(fill="x", padx=10, pady=10)
         
@@ -425,7 +467,6 @@ class NexusLearnUnifiedApp:
         if path:
             filename = os.path.basename(path)
             self.push_global_broadcast({"action": "MEDIA_SHARE", "filename": filename})
-            messagebox.showinfo("Media Share Success", f"Broadcast link payload for '{filename}' transmitted down student pipelines.")
 
     def teacher_generate_pin(self):
         digits = "".join(random.choices(string.digits, k=4))
@@ -436,17 +477,13 @@ class NexusLearnUnifiedApp:
     def teacher_launch_class(self):
         self.current_class_name = self.ent_cname.get().strip()
         if not self.current_class_name or not self.active_session_pin:
-            messagebox.showwarning("Warning", "Assign a Class Title and structural network code parameter first.")
             return
         
-        ans = messagebox.askyesno("Confirmation Prompt", f"Deploy network infrastructure paths for:\nClass: {self.current_class_name}\nCode: {self.active_session_pin}?")
-        if ans:
-            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
-                                (self.active_session_pin, f"SESSION_START:{self.current_class_name}"))
-            self.conn.commit()
-            self.btn_t_break.config(state=tk.NORMAL, bg="#E63946")
-            self.push_global_broadcast({"action": "LAUNCH_CLASS", "title": self.current_class_name})
-            messagebox.showinfo("Live Ready", "Classroom space initialized over secure cloud routing links.")
+        self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
+                            (self.active_session_pin, f"SESSION_START:{self.current_class_name}"))
+        self.conn.commit()
+        self.btn_t_break.config(state=tk.NORMAL, bg="#E63946")
+        self.push_global_broadcast({"action": "LAUNCH_CLASS", "title": self.current_class_name})
 
     def teacher_toggle_break(self):
         if not self.is_break_active:
@@ -510,8 +547,6 @@ class NexusLearnUnifiedApp:
                     "options": split_opts,
                     "duration": tm
                 })
-                
-                messagebox.showinfo("Exam Deployed", "CBT configuration metrics synchronized across live instances.")
                 win.destroy()
                 
         tk.Button(win, text="Publish Assessment Live", command=deploy, bg="#5BC0BE", fg="#0B132B").pack(pady=15)
@@ -526,9 +561,6 @@ class NexusLearnUnifiedApp:
             self.push_global_broadcast({"action": "PRIVATE_ALERT", "target": t, "message": m})
             self.ent_dm_txt.delete(0, tk.END)
 
-    # =========================================================================
-    # STUDENT PIPELINE MODULES
-    # =========================================================================
     def load_student_login(self):
         if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists():
             self.gateway_frame.destroy()
@@ -588,16 +620,12 @@ class NexusLearnUnifiedApp:
 
     def student_upload_media(self):
         path = filedialog.askopenfilename(filetypes=[("Student Workspace Share", "*.png *.jpg *.jpeg *.txt")])
-        if path:
-            filename = os.path.basename(path)
-            messagebox.showinfo("File Uploaded", f"'{filename}' attached to connection deck safely.")
 
     def dispatch_student_emote(self, emote, action_name):
         lbl = tk.Label(self.s_stage, text=emote, font=("Helvetica", 36), bg="#1C2541", fg="#5BC0BE")
         lbl.place(relx=0.8, rely=0.7)
         self.root.after(2000, lbl.destroy)
         
-        # Mirror emote signature packets seamlessly down cloud mesh layers
         def push_signal():
             try:
                 requests.post(SECURE_CLOUD_ENDPOINT, json={
@@ -628,7 +656,7 @@ class NexusLearnUnifiedApp:
                         payload = msg.split(":", 1)[1]
                         self.root.after(0, self.student_force_cbt, payload)
                 elif recipient == self.student_name and sender == "TEACHER":
-                    self.root.after(0, lambda m=msg: messagebox.showinfo("Private Prompt from Teacher", m))
+                    pass
 
     def student_render_break(self, duration_secs):
         self.s_break_overlay = tk.Frame(self.root, bg="#0B132B")
@@ -679,7 +707,6 @@ class NexusLearnUnifiedApp:
             tk.Button(btn_pane, text=clean_opt, font=("Helvetica", 11), bg="#1C2541", fg="#FFFFFF", width=35, command=lambda o=clean_opt: self.student_submit_cbt(o)).pack(pady=5)
 
     def student_submit_cbt(self, selected_option):
-        # Sync selected option coordinates into our global server mesh array
         def report():
             try:
                 requests.post(SECURE_CLOUD_ENDPOINT, json={
@@ -692,7 +719,6 @@ class NexusLearnUnifiedApp:
             except Exception: pass
         threading.Thread(target=report, daemon=True).start()
         
-        messagebox.showinfo("Success", f"Assessment response '{selected_option}' transmitted successfully.")
         self.cbt_frame.destroy()
         self.s_work.pack(fill="both", expand=True)
 
