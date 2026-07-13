@@ -15,6 +15,12 @@ CORS(server) # Allows your GitHub page to connect securely
 
 DB_FILE = "nexuslearn_system.db"
 
+def get_db_connection():
+    """Helper function to open connection and immediately enable WAL mode."""
+    conn = sqlite3.connect(DB_FILE, timeout=20.0) # Extended timeout for web traffic
+    conn.execute("PRAGMA journal_mode=WAL;")      # Fixes the database lock issue
+    return conn
+
 # =====================================================================
 # BACKGROUND FLASK SERVER ENGINE (Receives data from your website)
 # =====================================================================
@@ -30,7 +36,7 @@ def handle_web_heartbeat():
 
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    with sqlite3.connect(DB_FILE) as conn:
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         # Ensure chat_logs table exists to catch web activity
         cursor.execute("""
@@ -60,7 +66,7 @@ def verify_teacher_pin():
     
     now = datetime.datetime.now()
     
-    with sqlite3.connect(DB_FILE) as conn:
+    with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM teachers WHERE auth_pin = ?", (pin,))
@@ -110,28 +116,27 @@ class NexusLearnAdminConsole:
         self.auto_refresh_loop() # Live data polling thread
 
     def init_admin_database(self):
-        self.conn = sqlite3.connect(DB_FILE)
-        self.cursor = self.conn.cursor()
-        
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS teachers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                auth_pin TEXT UNIQUE NOT NULL,
-                payment_status TEXT DEFAULT 'Unpaid',
-                expiration_timestamp DATETIME
-            )
-        """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS chat_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT,
-                message TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        self.conn.commit()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS teachers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    auth_pin TEXT UNIQUE NOT NULL,
+                    payment_status TEXT DEFAULT 'Unpaid',
+                    expiration_timestamp DATETIME
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chat_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    message TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
 
     def generate_unique_secure_pin(self):
         while True:
@@ -140,9 +145,11 @@ class NexusLearnAdminConsole:
             letters = "".join(random.choices(string.ascii_uppercase, k=2))
             pin = digits + letters
             
-            self.cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
-            if not self.cursor.fetchone():
-                return pin
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
+                if not cursor.fetchone():
+                    return pin
 
     def register_and_expire_pin(self):
         username = self.ent_user.get().strip()
@@ -165,11 +172,13 @@ class NexusLearnAdminConsole:
         expiration_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S')
         
         try:
-            self.cursor.execute(
-                "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
-                (username, password, auth_pin, payment, expiration_str)
-            )
-            self.conn.commit()
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
+                    (username, password, auth_pin, payment, expiration_str)
+                )
+                conn.commit()
             messagebox.showinfo("PIN Live", f"Authorization Node Written!\n\nGenerated PIN: {auth_pin}\nExpires: {expiration_str}")
             self.ent_user.delete(0, tk.END)
             self.ent_pass.delete(0, tk.END)
@@ -181,16 +190,19 @@ class NexusLearnAdminConsole:
         # 1. Refresh Accounts
         for item in self.tree_accounts.get_children():
             self.tree_accounts.delete(item)
-        self.cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
-        for row in self.cursor.fetchall():
-            self.tree_accounts.insert("", tk.END, values=row)
             
-        # 2. Refresh Live Monitor Stream
-        for item in self.tree_live.get_children():
-            self.tree_live.delete(item)
-        self.cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
-        for row in self.cursor.fetchall():
-            self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
+            for row in cursor.fetchall():
+                self.tree_accounts.insert("", tk.END, values=row)
+                
+            # 2. Refresh Live Monitor Stream
+            for item in self.tree_live.get_children():
+                self.tree_live.delete(item)
+            cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
+            for row in cursor.fetchall():
+                self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
 
     def auto_refresh_loop(self):
         """Automatically updates tracking readouts every 3 seconds without freezing windows."""
