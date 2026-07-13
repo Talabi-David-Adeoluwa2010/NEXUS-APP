@@ -14,76 +14,293 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
+            position: relative;
         }
-        .gateway-card {
-            background-color: #1C2541;
-            padding: 40px;
-            border-radius: 12px;
-            text-align: center;
-            width: 320px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+
+        /* FLOATING BACKGROUND BACKGROUND BACKGROUND */
+        .bg-floating-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+            pointer-events: none;
         }
-        h1 {
+        .floating-item {
+            position: absolute;
+            font-size: 24px;
+            opacity: 0.15;
+            animation: floatAnimation 12s infinite linear;
+            bottom: -50px;
+        }
+        @keyframes floatAnimation {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.25;
+            }
+            90% {
+                opacity: 0.25;
+            }
+            100% {
+                transform: translateY(-110vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        /* BOOT / LOADING SCREEN OVERLAY */
+        #boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #0B132B;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        .boot-logo {
             color: #5BC0BE;
             font-size: 36px;
-            margin: 0 0 10px 0;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
         }
-        h2 {
-            font-size: 22px;
-            margin-bottom: 5px;
+        .boot-pct {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #FFFFFF;
         }
-        p {
-            color: #6C757D;
+        .progress-bar-container {
+            width: 280px;
+            height: 6px;
+            background-color: #1C2541;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #5BC0BE;
+            transition: width 0.02s linear;
+        }
+
+        /* MAIN APP CONTAINER */
+        .container {
+            background-color: #1C2541;
+            padding: 35px 40px;
+            border-radius: 16px;
+            text-align: center;
+            width: 350px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            z-index: 10;
+            border: 1px solid rgba(91, 192, 190, 0.1);
+        }
+        h1.logo-icon { color: #5BC0BE; font-size: 42px; margin: 0 0 5px 0; }
+        h2 { font-size: 24px; margin-bottom: 10px; font-weight: 700; letter-spacing: 0.5px; }
+        p.subtitle { color: #5BC0BE; font-size: 13px; margin: 0 0 20px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* ABOUT SECTION PANEL */
+        .about-box {
+            background-color: #0B132B;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 13px;
+            color: #A5B1C2;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            text-align: left;
+            border-left: 3px solid #5BC0BE;
+        }
+
+        /* Input styling */
+        label { display: block; text-align: left; font-size: 13px; margin-top: 15px; color: #FFFFFF; font-weight: 500; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            box-sizing: border-box;
+            background-color: #0B132B;
+            border: 1px solid #1C2541;
+            border-radius: 6px;
+            color: #FFFFFF;
             font-size: 14px;
-            margin-bottom: 30px;
+            transition: border 0.3s;
         }
+        input:focus {
+            outline: none;
+            border-color: #5BC0BE;
+        }
+        
+        /* Interactive Buttons */
         .btn {
             display: block;
             width: 100%;
             padding: 14px;
-            margin: 12px 0;
+            margin: 15px 0 5px 0;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.2s;
+            transition: 0.2s ease;
         }
-        .btn-teacher {
-            background-color: #5BC0BE;
-            color: #0B132B;
-        }
-        .btn-teacher:hover {
-            background-color: #46a2a0;
-        }
-        .btn-student {
-            background-color: #1C2541;
-            color: #FFFFFF;
-            border: 2px solid #5BC0BE;
-        }
-        .btn-student:hover {
-            background-color: #253359;
-        }
-        .footer {
-            margin-top: 30px;
-            font-size: 11px;
+        .btn-primary { background-color: #5BC0BE; color: #0B132B; }
+        .btn-primary:hover { background-color: #46a2a0; transform: translateY(-1px); }
+        .btn-secondary { background-color: #1C2541; color: #FFFFFF; border: 2px solid #5BC0BE; }
+        .btn-secondary:hover { background-color: #253359; transform: translateY(-1px); }
+        .btn-text { background: none; border: none; color: #6C757D; cursor: pointer; text-decoration: underline; margin-top: 15px; font-size: 13px; }
+        .btn-text:hover { color: #5BC0BE; }
+        
+        /* STRICT FIXED BOTTOM LEFT OWNER BRANDING */
+        .fixed-left-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 25px;
+            font-size: 12px;
             color: #6C757D;
             font-style: italic;
+            z-index: 100;
+            letter-spacing: 0.5px;
         }
+        .fixed-left-footer strong {
+            color: #A5B1C2;
+        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="gateway-card">
-        <h1>▲</h1>
-        <h2>Welcome to NexusLearn</h2>
-        <p>Select your entry mode portal:</p>
-        
-        <button class="btn btn-teacher" onclick="alert('Connecting to Teacher Portal...')">[ I am a Teacher ]</button>
-        <button class="btn btn-student" onclick="alert('Connecting to Student Portal...')">[ I am a Student ]</button>
-        
-        <div class="footer">Produced / Founded by Talabi David Adeoluwa</div>
+    <div class="bg-floating-layer" id="floating-layer"></div>
+
+    <div id="boot-screen">
+        <div class="boot-logo">▲<br>NEXUSLEARN</div>
+        <div id="boot-text" class="boot-pct">System Booting: 01%</div>
+        <div class="progress-bar-container">
+            <div id="progress-fill" class="progress-bar-fill"></div>
+        </div>
     </div>
 
+    <div id="gateway-view" class="container hidden">
+        <h1 class="logo-icon">▲</h1>
+        <h2>NexusLearn</h2>
+        <p class="subtitle">Unified Learning Environment</p>
+        
+        <div class="about-box">
+            <strong>About the App:</strong><br>
+            A high-performance interconnected network platform designed to synchronize live classrooms, deploy CBT assessment matrices, manage communication logs, and provide secure gatekept access portals for both educators and students.
+        </div>
+
+        <button class="btn btn-primary" onclick="switchView('teacher-view')">[ I am a Teacher ]</button>
+        <button class="btn btn-secondary" onclick="switchView('student-view')">[ I am a Student ]</button>
+    </div>
+
+    <div id="teacher-view" class="container hidden">
+        <h1 class="logo-icon">▲</h1>
+        <h2 style="color: #5BC0BE; margin-bottom: 5px;">Educator Gateway</h2>
+        <p class="subtitle" style="color: #6C757D;">Administrative Authorization</p>
+        
+        <label>Username / Email:</label>
+        <input type="text" id="t-user" placeholder="Enter username">
+        
+        <label>Password:</label>
+        <input type="password" id="t-pass" placeholder="Enter password">
+        
+        <label>Admin Authorization PIN:</label>
+        <input type="text" id="t-pin" placeholder="Enter auth PIN">
+        
+        <button class="btn btn-primary" onclick="handleTeacherLogin()">Authenticate Credentials</button>
+        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
+    </div>
+
+    <div id="student-view" class="container hidden">
+        <h1 class="logo-icon">▲</h1>
+        <h2 style="color: #5BC0BE; margin-bottom: 5px;">Student Gateway</h2>
+        <p class="subtitle" style="color: #6C757D;">Classroom Node Connection</p>
+        
+        <label>Your Screen Profile Name:</label>
+        <input type="text" id="s-name" placeholder="e.g., David">
+        
+        <label>Active Classroom Code:</label>
+        <input type="text" id="s-code" placeholder="Enter 6-digit code">
+        
+        <button class="btn btn-primary" onclick="handleStudentLogin()">Establish Connection Roster</button>
+        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
+    </div>
+
+    <div class="fixed-left-footer">
+        Producer/Founder - <strong>Talabi David Adeoluwa</strong>
+    </div>
+
+    <script>
+        // Dynamically populate moving underlay backgrounds
+        const layer = document.getElementById('floating-layer');
+        const elements = ['📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️'];
+        
+        elements.forEach((emoji, index) => {
+            const span = document.createElement('span');
+            span.className = 'floating-item';
+            span.innerText = emoji;
+            span.style.left = `${(index * 12) + Math.random() * 8}%`;
+            span.style.animationDelay = `${Math.random() * 8}s`;
+            span.style.animationDuration = `${10 + Math.random() * 6}s`;
+            layer.appendChild(span);
+        });
+
+        // Automatic Boot Simulation Vector
+        window.addEventListener('DOMContentLoaded', () => {
+            let percent = 1;
+            const textElement = document.getElementById('boot-text');
+            const fillElement = document.getElementById('progress-fill');
+            const bootScreen = document.getElementById('boot-screen');
+            const gatewayView = document.getElementById('gateway-view');
+
+            const interval = setInterval(() => {
+                percent++;
+                textElement.innerText = `System Booting: ${percent < 10 ? '0' + percent : percent}%`;
+                fillElement.style.width = `${percent}%`;
+
+                if (percent >= 100) {
+                    clearInterval(interval);
+                    bootScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        bootScreen.style.display = 'none';
+                        gatewayView.classList.remove('hidden');
+                    }, 500);
+                }
+            }, 25);
+        });
+
+        // Navigation Routing Matrix
+        function switchView(viewId) {
+            document.getElementById('gateway-view').classList.add('hidden');
+            document.getElementById('teacher-view').classList.add('hidden');
+            document.getElementById('student-view').classList.add('hidden');
+            
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        function handleTeacherLogin() {
+            const user = document.getElementById('t-user').value;
+            alert('Interface Authenticating: ' + user);
+        }
+
+        function handleStudentLogin() {
+            const name = document.getElementById('s-name').value;
+            alert('Connecting ' + name + ' to network parameters.');
+        }
+    </script>
 </body>
 </html>
