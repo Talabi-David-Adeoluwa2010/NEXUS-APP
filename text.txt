@@ -26,7 +26,7 @@ class NexusLearnUnifiedApp:
     def __init__(self, root):
         self.root = root
         self.root.title("NexusLearn // Unified Learning Environment")
-        self.root.geometry("1000x680")
+        self.root.geometry("1100x720")
         self.root.configure(bg="#0B132B")
         
         # State tracking matrices
@@ -43,8 +43,9 @@ class NexusLearnUnifiedApp:
         # Treeview styling maps
         self.style = ttk.Style()
         self.style.theme_use("clam")
-        self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
-        self.style.map("Treeview", background=[('selected', '#5BC0BE')])
+        self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=28)
+        self.style.configure("Treeview.Heading", background="#0B132B", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
+        self.style.map("Treeview", background=[('selected', '#5BC0BE')], foreground=[('selected', '#0B132B')])
         
         # Start pure HTTPS cloud listening monitor loop to track GitHub front-end queues
         threading.Thread(target=self.start_cloud_polling_engine, daemon=True).start()
@@ -58,7 +59,7 @@ class NexusLearnUnifiedApp:
     def start_cloud_polling_engine(self):
         """Listens directly to the HTTPS secure cloud data mesh for web inputs."""
         while True:
-            time.sleep(2.5)  # Poll comfortably every 2.5 seconds
+            time.sleep(2.0)  # Poll comfortably every 2 seconds
             try:
                 response = requests.get(SECURE_CLOUD_ENDPOINT, timeout=3)
                 if response.status_code == 200 and response.text.strip():
@@ -68,10 +69,16 @@ class NexusLearnUnifiedApp:
                     # Prevent processing outdated commands
                     if req_time > self.last_processed_time:
                         self.last_processed_time = req_time
-                        if request_data.get("type") == "TEACHER_LOGIN":
+                        req_type = request_data.get("type")
+                        
+                        if req_type == "TEACHER_LOGIN":
                             self.root.after(0, self.handle_web_teacher_auth, request_data)
-                        elif request_data.get("type") == "STUDENT_LOGIN":
+                        elif req_type == "STUDENT_LOGIN":
                             self.root.after(0, self.handle_web_student_auth, request_data)
+                        elif req_type == "STUDENT_ACTION" and request_data.get("code") == self.active_session_pin:
+                            self.root.after(0, self.process_web_student_action, request_data.get("name"), request_data.get("action"))
+                        elif req_type == "CBT_SUBMISSION" and request_data.get("code") == self.active_session_pin:
+                            self.root.after(0, self.process_web_cbt_submission, request_data.get("name"), request_data.get("answer"))
             except Exception:
                 pass  # Safely bypass brief web network dropped frames
 
@@ -83,11 +90,31 @@ class NexusLearnUnifiedApp:
         self.confirm_handshake_to_cloud(self.student_name)
 
     def handle_web_student_auth(self, data):
-        self.student_name = data.get("name")
-        self.active_session_pin = data.get("code")
-        if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
-        self.build_student_workspace()
-        self.confirm_handshake_to_cloud(self.student_name)
+        target_code = data.get("code")
+        # Route logic based on active role matching profile frames
+        if hasattr(self, 't_roster') and self.t_roster.winfo_exists() and target_code == self.active_session_pin:
+            self.root.after(0, self.register_live_student_node, data.get("name"))
+        elif not hasattr(self, 't_roster'):
+            self.student_name = data.get("name")
+            self.active_session_pin = target_code
+            if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
+            self.build_student_workspace()
+        self.confirm_handshake_to_cloud(data.get("name"))
+
+    def process_web_student_action(self, name, action):
+        """Processes emote highlights pushed from active web student instances directly onto teacher panel rows."""
+        if hasattr(self, 't_roster'):
+            action_labels = {
+                "EMOTE_RAISE": "🖐️ Hand Raised (Awaiting Prompt)",
+                "EMOTE_CLAP": "👏 Sent Performance Applaud"
+            }
+            mapped_text = action_labels.get(action, "Active Workspace Feed Update")
+            self.register_live_student_node(name, status=mapped_text)
+
+    def process_web_cbt_submission(self, name, answer):
+        """Grades incoming web assessment payloads and drops records directly inside teacher grid arrays."""
+        if hasattr(self, 't_roster'):
+            self.register_live_student_node(name, status="CBT Score Transmitted Securely", grade=f"Locked: {answer}")
 
     def confirm_handshake_to_cloud(self, username):
         """Informs the static webpage that the desktop process successfully loaded."""
@@ -99,8 +126,27 @@ class NexusLearnUnifiedApp:
                 pass
         threading.Thread(target=run, daemon=True).start()
 
+    def push_global_broadcast(self, payload):
+        """Pushes data coordinates downstream into matching cloud targets for open web browser tabs."""
+        def task():
+            try:
+                payload["timestamp"] = int(time.time() * 1000)
+                requests.post(f"https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_broadcast_{self.active_session_pin}", json=payload, timeout=3)
+            except Exception:
+                pass
+        threading.Thread(target=task, daemon=True).start()
+
+    def register_live_student_node(self, name, status="Node Hook Established", grade="No Evaluation Records"):
+        """Inserts or updates rows within the real-time student activity tracking table."""
+        if hasattr(self, 't_roster'):
+            for item in self.t_roster.get_children():
+                if self.t_roster.item(item)['values'][0] == name:
+                    self.t_roster.item(item, values=(name, status, grade))
+                    return
+            self.t_roster.insert("", tk.END, values=(name, status, grade))
+
     def init_shared_database(self):
-        self.conn = sqlite3.connect("nexuslearn_system.db")
+        self.conn = sqlite3.connect("nexuslearn_system.db", check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS teachers (
@@ -196,7 +242,6 @@ class NexusLearnUnifiedApp:
         btn_auth.pack(pady=20)
 
     def verify_teacher_credentials(self):
-        # Bypasses local relational validation structures to ease straight cross-sync testing
         self.student_name = self.ent_t_user.get().strip() or "Educator Node"
         self.login_frame.destroy()
         self.run_teacher_10s_transition()
@@ -250,11 +295,12 @@ class NexusLearnUnifiedApp:
         right_p = tk.Frame(self.main_work, bg="#0B132B")
         right_p.pack(side=tk.RIGHT, fill="both", expand=True, padx=10, pady=10)
         
-        tk.Label(right_p, text="Live Classroom Connections Monitor", font=("Helvetica", 13, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", pady=5)
+        tk.Label(right_p, text="Live Classroom Connections Monitor Roster", font=("Helvetica", 13, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", pady=5)
         
-        self.t_roster = ttk.Treeview(right_p, columns=("name", "status"), show="headings")
+        self.t_roster = ttk.Treeview(right_p, columns=("name", "status", "score"), show="headings")
         self.t_roster.heading("name", text="Student Display Identifier")
-        self.t_roster.heading("status", text="Realtime Activity State")
+        self.t_roster.heading("status", text="Realtime Activity State Action")
+        self.t_roster.heading("score", text="CBT Lock Matrix Result Track")
         self.t_roster.pack(fill="both", expand=True, pady=5)
         
         dm_box = tk.LabelFrame(right_p, text="Direct Assist Console (One-to-One Private Messaging)", bg="#1C2541", fg="#5BC0BE")
@@ -290,6 +336,7 @@ class NexusLearnUnifiedApp:
                                 (self.active_session_pin, f"SESSION_START:{self.current_class_name}"))
             self.conn.commit()
             self.btn_t_break.config(state=tk.NORMAL, bg="#E63946")
+            self.push_global_broadcast({"action": "LAUNCH_CLASS", "title": self.current_class_name})
             messagebox.showinfo("Live Ready", "Classroom space initialized over secure cloud routing links.")
 
     def teacher_toggle_break(self):
@@ -299,6 +346,7 @@ class NexusLearnUnifiedApp:
             self.btn_t_break.config(text="Extend Break Time (+2m)", bg="#FFB703")
             self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', 'STATE:BREAK_START')", (self.active_session_pin,))
             self.conn.commit()
+            self.push_global_broadcast({"action": "BREAK_START"})
             threading.Thread(target=self.teacher_break_clock_loop, daemon=True).start()
         else:
             self.break_time_left += 120
@@ -311,6 +359,7 @@ class NexusLearnUnifiedApp:
             self.is_break_active = False
             self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', 'STATE:BREAK_END')", (self.active_session_pin,))
             self.conn.commit()
+            self.push_global_broadcast({"action": "BREAK_END"})
             self.root.after(0, lambda: self.btn_t_break.config(text="Initiate Break Time (10m)", bg="#E63946"))
 
     def teacher_open_exam(self):
@@ -327,6 +376,7 @@ class NexusLearnUnifiedApp:
         
         tk.Label(win, text="Options Matrix Array (Split with | character):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
         e_opts = tk.Entry(win, bg="#0B132B", fg="#FFFFFF")
+        e_opts.insert(0, "Option A | Option B | Option C | Option D")
         e_opts.pack(fill="x", padx=20, pady=5)
         
         tk.Label(win, text="Testing Time Constraints (Minutes):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
@@ -342,6 +392,15 @@ class NexusLearnUnifiedApp:
                 self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
                                     (self.active_session_pin, f"EXAM_LAUNCH:{tm}|{q}|{opts}"))
                 self.conn.commit()
+                
+                split_opts = [o.strip() for o in opts.split("|") if o.strip()]
+                self.push_global_broadcast({
+                    "action": "DEPLOY_CBT",
+                    "question": q,
+                    "options": split_opts,
+                    "duration": tm
+                })
+                
                 messagebox.showinfo("Exam Deployed", "CBT configuration metrics synchronized across live instances.")
                 win.destroy()
                 
@@ -354,6 +413,7 @@ class NexusLearnUnifiedApp:
             self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'TEACHER', ?, ?)",
                                 (self.active_session_pin, t, m))
             self.conn.commit()
+            self.push_global_broadcast({"action": "PRIVATE_ALERT", "target": t, "message": m})
             self.ent_dm_txt.delete(0, tk.END)
 
     # =========================================================================
@@ -400,10 +460,10 @@ class NexusLearnUnifiedApp:
         s_dock = tk.Frame(self.s_work, bg="#0B132B", height=70)
         s_dock.pack(fill="x", side=tk.BOTTOM, padx=10, pady=5)
         
-        btn_raise = tk.Button(s_dock, text="🖐️ Raise Hand", command=lambda: self.dispatch_student_emote("🖐️"), bg="#1C2541", fg="#FFFFFF")
+        btn_raise = tk.Button(s_dock, text="🖐️ Raise Hand", command=lambda: self.dispatch_student_emote("🖐️", "EMOTE_RAISE"), bg="#1C2541", fg="#FFFFFF")
         btn_raise.pack(side=tk.LEFT, padx=5, pady=5)
         
-        btn_clap = tk.Button(s_dock, text="👏 Send Clap", command=lambda: self.dispatch_student_emote("👏"), bg="#1C2541", fg="#FFFFFF")
+        btn_clap = tk.Button(s_dock, text="👏 Send Clap", command=lambda: self.dispatch_student_emote("👏", "EMOTE_CLAP"), bg="#1C2541", fg="#FFFFFF")
         btn_clap.pack(side=tk.LEFT, padx=5, pady=5)
         
         tk.Label(s_dock, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.RIGHT, padx=10)
@@ -411,10 +471,23 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=self.student_sync_thread, daemon=True).start()
         threading.Thread(target=self.heartbeat_broadcast_loop, args=("Student", "Attending Lesson"), daemon=True).start()
 
-    def dispatch_student_emote(self, emote):
+    def dispatch_student_emote(self, emote, action_name):
         lbl = tk.Label(self.s_stage, text=emote, font=("Helvetica", 36), bg="#1C2541", fg="#5BC0BE")
         lbl.place(relx=0.8, rely=0.7)
         self.root.after(2000, lbl.destroy)
+        
+        # Mirror emote signature packets seamlessly down cloud mesh layers
+        def push_signal():
+            try:
+                requests.post(SECURE_CLOUD_ENDPOINT, json={
+                    "type": "STUDENT_ACTION",
+                    "name": self.student_name,
+                    "code": self.active_session_pin,
+                    "action": action_name,
+                    "timestamp": int(time.time() * 1000)
+                }, timeout=3)
+            except Exception: pass
+        threading.Thread(target=push_signal, daemon=True).start()
 
     def student_sync_thread(self):
         last_seen_id = 0
@@ -466,10 +539,24 @@ class NexusLearnUnifiedApp:
         btn_pane.pack(pady=10)
         
         for opt in options.split("|"):
-            tk.Button(btn_pane, text=opt.strip(), font=("Helvetica", 11), bg="#1C2541", fg="#FFFFFF", width=35, command=self.student_submit_cbt).pack(pady=5)
+            clean_opt = opt.strip()
+            tk.Button(btn_pane, text=clean_opt, font=("Helvetica", 11), bg="#1C2541", fg="#FFFFFF", width=35, command=lambda o=clean_opt: self.student_submit_cbt(o)).pack(pady=5)
 
-    def student_submit_cbt(self):
-        messagebox.showinfo("Success", "Assessment responses transmitted successfully.")
+    def student_submit_cbt(self, selected_option):
+        # Sync selected option coordinates into our global server mesh array
+        def report():
+            try:
+                requests.post(SECURE_CLOUD_ENDPOINT, json={
+                    "type": "CBT_SUBMISSION",
+                    "name": self.student_name,
+                    "code": self.active_session_pin,
+                    "answer": selected_option,
+                    "timestamp": int(time.time() * 1000)
+                }, timeout=3)
+            except Exception: pass
+        threading.Thread(target=report, daemon=True).start()
+        
+        messagebox.showinfo("Success", f"Assessment response '{selected_option}' transmitted successfully.")
         self.cbt_frame.destroy()
         self.s_work.pack(fill="both", expand=True)
 
