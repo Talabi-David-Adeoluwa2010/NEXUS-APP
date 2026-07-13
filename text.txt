@@ -45,8 +45,56 @@ class NexusLearnUnifiedApp:
         self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
         self.style.map("Treeview", background=[('selected', '#5BC0BE')])
         
+        # Start a background cloud polling thread to monitor GitHub webpage queues
+        threading.Thread(target=self.start_cloud_polling_engine, daemon=True).start()
+        
         # Launch High-Tech Boot Canvas Sequence
         self.run_fast_loading_canvas()
+
+    # =========================================================================
+    # CLOUD WEB DESKTOP LINKAGE BRIDGE (NO WEBSOCKET PIPS NEEDED)
+    # =========================================================================
+    def start_cloud_polling_engine(self):
+        """Periodically requests connection cues directly from your online web host database."""
+        while True:
+            time.sleep(3.5) # Poll every 3.5 seconds safely
+            try:
+                # Query Flask backend for login signals submitted from index.html on GitHub
+                response = requests.get(f"{API_BASE_URL}/api/client/pending-web-requests", timeout=3)
+                if response.status_code == 200:
+                    pending_data = response.json()
+                    
+                    for request in pending_data.get("requests", []):
+                        if request.get("type") == "TEACHER_LOGIN":
+                            self.root.after(0, self.handle_web_teacher_auth, request)
+                        elif request.get("type") == "STUDENT_LOGIN":
+                            self.root.after(0, self.handle_web_student_auth, request)
+            except Exception:
+                pass # Gracefully handle momentary local routing drops
+
+    def handle_web_teacher_auth(self, data):
+        self.student_name = data.get("username")
+        if hasattr(self, 'load_frame') and self.load_frame.winfo_exists(): self.load_frame.destroy()
+        if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
+        self.run_teacher_10s_transition()
+        self.confirm_handshake_to_cloud(self.student_name, "GLOBAL_NODE")
+
+    def handle_web_student_auth(self, data):
+        self.student_name = data.get("name")
+        self.active_session_pin = data.get("code")
+        if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
+        self.build_student_workspace()
+        self.confirm_handshake_to_cloud(self.student_name, self.active_session_pin)
+
+    def confirm_handshake_to_cloud(self, username, session_id):
+        """Marks the cross-platform connection channel state as fully functional."""
+        def run():
+            try:
+                payload = {"username": username, "session_id": session_id, "status": "ACTIVE_IN_APP"}
+                requests.post(f"{API_BASE_URL}/api/client/confirm-sync", json=payload, timeout=3)
+            except Exception:
+                pass
+        threading.Thread(target=run, daemon=True).start()
 
     def init_shared_database(self):
         self.conn = sqlite3.connect("nexuslearn_system.db")
@@ -93,7 +141,7 @@ class NexusLearnUnifiedApp:
 
     def simulate_fast_boot(self):
         for i in range(1, 101):
-            time.sleep(0.01) # Blazing fast load sequence activation
+            time.sleep(0.01)
             self.root.after(0, self.update_progress, i)
         self.root.after(0, self.load_role_selection_gateway)
 
@@ -102,7 +150,8 @@ class NexusLearnUnifiedApp:
         self.lbl_pct.config(text=f"System Booting: {val:02d}%")
 
     def load_role_selection_gateway(self):
-        self.load_frame.destroy()
+        if hasattr(self, 'load_frame') and self.load_frame.winfo_exists():
+            self.load_frame.destroy()
         
         self.gateway_frame = tk.Frame(self.root, bg="#0B132B")
         self.gateway_frame.pack(expand=True)
@@ -148,12 +197,11 @@ class NexusLearnUnifiedApp:
         pwd = self.ent_t_pass.get().strip()
         pin = self.ent_t_pin.get().strip()
         
-        # Core Network Authentication Verification Attempt
         try:
             payload = {"pin": pin, "username": user, "password": pwd}
             response = requests.post(f"{API_BASE_URL}/api/client/verify-pin", json=payload, timeout=4)
             if response.status_code == 200:
-                self.student_name = user # Cache identities
+                self.student_name = user
                 self.login_frame.destroy()
                 self.run_teacher_10s_transition()
                 return
@@ -162,7 +210,6 @@ class NexusLearnUnifiedApp:
                 messagebox.showerror("Access Denied", msg)
                 return
         except Exception:
-            # Local Database Failback Configuration if server connection falls out
             self.cursor.execute("SELECT expiration_timestamp, payment_status FROM teachers WHERE username=? AND password=? AND auth_pin=?", (user, pwd, pin))
             record = self.cursor.fetchone()
             
@@ -248,11 +295,9 @@ class NexusLearnUnifiedApp:
         btn_dm_send = tk.Button(dm_box, text="Send Direct Text", command=self.teacher_send_dm, bg="#5BC0BE", fg="#0B132B")
         btn_dm_send.pack(side=tk.RIGHT, padx=5, pady=5)
 
-        # Launch active metrics push loop thread
         threading.Thread(target=self.heartbeat_broadcast_loop, args=("Teacher", "Idling"), daemon=True).start()
 
     def teacher_generate_pin(self):
-        # Generates structural alphanumeric codes matching admin matrix profiles
         digits = "".join(random.choices(string.digits, k=4))
         letters = "".join(random.choices(string.ascii_uppercase, k=2))
         self.active_session_pin = digits + letters
@@ -381,6 +426,8 @@ class NexusLearnUnifiedApp:
             messagebox.showerror("Failed Connection", "Targeted classroom network node signature unrecognized.")
 
     def build_student_workspace(self):
+        if hasattr(self, 's_login_frame') and self.s_login_frame.winfo_exists(): self.s_login_frame.destroy()
+        
         self.s_work = tk.Frame(self.root, bg="#0B132B")
         self.s_work.pack(fill="both", expand=True)
         
@@ -473,7 +520,6 @@ class NexusLearnUnifiedApp:
     # CORE LIVE CENTRAL SERVER TELEMETRY BRIDGES
     # =========================================================================
     def sync_action_to_server(self, action_description):
-        """Asynchronously updates current operations to your live admin server monitor."""
         def run():
             try:
                 payload = {
@@ -488,7 +534,6 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=run, daemon=True).start()
 
     def heartbeat_broadcast_loop(self, role, default_action):
-        """Persistent background tracking stream that pushes status metrics every 5 seconds."""
         while True:
             current_action = default_action
             if role == "Student" and hasattr(self, 'cbt_frame') and self.cbt_frame.winfo_exists():
@@ -512,4 +557,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = NexusLearnUnifiedApp(root)
     root.mainloop()
-
