@@ -8,7 +8,6 @@ import datetime
 import threading
 import json
 
-# Attempt to import requests for live web synchronization channel routing
 try:
     import requests
 except ImportError:
@@ -59,14 +58,13 @@ class NexusLearnUnifiedApp:
     def start_cloud_polling_engine(self):
         """Listens directly to the HTTPS secure cloud data mesh for web inputs."""
         while True:
-            time.sleep(2.0)  # Poll comfortably every 2 seconds
+            time.sleep(1.5)  # Polling rate optimization
             try:
                 response = requests.get(SECURE_CLOUD_ENDPOINT, timeout=3)
                 if response.status_code == 200 and response.text.strip():
                     request_data = response.json()
                     req_time = request_data.get("timestamp", 0)
                     
-                    # Prevent processing outdated commands
                     if req_time > self.last_processed_time:
                         self.last_processed_time = req_time
                         req_type = request_data.get("type")
@@ -80,29 +78,29 @@ class NexusLearnUnifiedApp:
                         elif req_type == "CBT_SUBMISSION" and request_data.get("code") == self.active_session_pin:
                             self.root.after(0, self.process_web_cbt_submission, request_data.get("name"), request_data.get("answer"))
             except Exception:
-                pass  # Safely bypass brief web network dropped frames
+                pass
 
     def handle_web_teacher_auth(self, data):
         self.student_name = data.get("username")
         if hasattr(self, 'load_frame') and self.load_frame.winfo_exists(): self.load_frame.destroy()
         if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
+        if hasattr(self, 'login_frame') and self.login_frame.winfo_exists(): self.login_frame.destroy()
         self.run_teacher_10s_transition()
         self.confirm_handshake_to_cloud(self.student_name)
 
     def handle_web_student_auth(self, data):
         target_code = data.get("code")
-        # Route logic based on active role matching profile frames
         if hasattr(self, 't_roster') and self.t_roster.winfo_exists() and target_code == self.active_session_pin:
             self.root.after(0, self.register_live_student_node, data.get("name"))
         elif not hasattr(self, 't_roster'):
             self.student_name = data.get("name")
             self.active_session_pin = target_code
             if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists(): self.gateway_frame.destroy()
+            if hasattr(self, 's_login_frame') and self.s_login_frame.winfo_exists(): self.s_login_frame.destroy()
             self.build_student_workspace()
         self.confirm_handshake_to_cloud(data.get("name"))
 
     def process_web_student_action(self, name, action):
-        """Processes emote highlights pushed from active web student instances directly onto teacher panel rows."""
         if hasattr(self, 't_roster'):
             action_labels = {
                 "EMOTE_RAISE": "🖐️ Hand Raised (Awaiting Prompt)",
@@ -112,12 +110,10 @@ class NexusLearnUnifiedApp:
             self.register_live_student_node(name, status=mapped_text)
 
     def process_web_cbt_submission(self, name, answer):
-        """Grades incoming web assessment payloads and drops records directly inside teacher grid arrays."""
         if hasattr(self, 't_roster'):
             self.register_live_student_node(name, status="CBT Score Transmitted Securely", grade=f"Locked: {answer}")
 
     def confirm_handshake_to_cloud(self, username):
-        """Informs the static webpage that the desktop process successfully loaded."""
         def run():
             try:
                 confirm_url = f"https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_confirm_{username}"
@@ -127,7 +123,6 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=run, daemon=True).start()
 
     def push_global_broadcast(self, payload):
-        """Pushes data coordinates downstream into matching cloud targets for open web browser tabs."""
         def task():
             try:
                 payload["timestamp"] = int(time.time() * 1000)
@@ -137,7 +132,6 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=task, daemon=True).start()
 
     def register_live_student_node(self, name, status="Node Hook Established", grade="No Evaluation Records"):
-        """Inserts or updates rows within the real-time student activity tracking table."""
         if hasattr(self, 't_roster'):
             for item in self.t_roster.get_children():
                 if self.t_roster.item(item)['values'][0] == name:
@@ -214,9 +208,6 @@ class NexusLearnUnifiedApp:
         btn_student = tk.Button(self.gateway_frame, text="[ I am a Student ]", command=self.load_student_login, bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 12, "bold"), width=25, pady=10)
         btn_student.pack(pady=10)
 
-    # =========================================================================
-    # TEACHER PIPELINE MODULES
-    # =========================================================================
     def load_teacher_login(self):
         if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists():
             self.gateway_frame.destroy()
@@ -256,7 +247,7 @@ class NexusLearnUnifiedApp:
         threading.Thread(target=self.wait_for_teacher_dashboard, daemon=True).start()
 
     def wait_for_teacher_dashboard(self):
-        time.sleep(10)
+        time.sleep(3)  # Accelerated for fast-sync demonstration workflows
         self.root.after(0, self.build_teacher_workspace)
 
     def build_teacher_workspace(self):
@@ -306,7 +297,7 @@ class NexusLearnUnifiedApp:
         dm_box = tk.LabelFrame(right_p, text="Direct Assist Console (One-to-One Private Messaging)", bg="#1C2541", fg="#5BC0BE")
         dm_box.pack(fill="x", pady=5)
         
-        self.ent_dm_target = tk.Entry(dm_box, width=15, bg="#0B132B", fg="#FFFFFF")
+        self.ent_dm_target = tk.Entry(dm_box, width=15, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
         self.ent_dm_target.insert(0, "Target Student")
         self.ent_dm_target.pack(side=tk.LEFT, padx=5, pady=5)
         
@@ -315,8 +306,6 @@ class NexusLearnUnifiedApp:
         
         btn_dm_send = tk.Button(dm_box, text="Send Direct Text", command=self.teacher_send_dm, bg="#5BC0BE", fg="#0B132B")
         btn_dm_send.pack(side=tk.RIGHT, padx=5, pady=5)
-
-        threading.Thread(target=self.heartbeat_broadcast_loop, args=("Teacher", "Idling"), daemon=True).start()
 
     def teacher_generate_pin(self):
         digits = "".join(random.choices(string.digits, k=4))
@@ -371,16 +360,16 @@ class NexusLearnUnifiedApp:
         tk.Label(win, text="CBT Testing Parameters Builder", font=("Helvetica", 11, "bold"), bg="#1C2541", fg="#5BC0BE").pack(pady=10)
         
         tk.Label(win, text="Question Prompt:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
-        t_box = tk.Text(win, height=4, bg="#0B132B", fg="#FFFFFF")
+        t_box = tk.Text(win, height=4, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
         t_box.pack(fill="x", padx=20, pady=5)
         
         tk.Label(win, text="Options Matrix Array (Split with | character):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
-        e_opts = tk.Entry(win, bg="#0B132B", fg="#FFFFFF")
+        e_opts = tk.Entry(win, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
         e_opts.insert(0, "Option A | Option B | Option C | Option D")
         e_opts.pack(fill="x", padx=20, pady=5)
         
         tk.Label(win, text="Testing Time Constraints (Minutes):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
-        e_time = tk.Entry(win, width=10, bg="#0B132B", fg="#FFFFFF")
+        e_time = tk.Entry(win, width=10, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
         e_time.insert(0, "45")
         e_time.pack(anchor="w", padx=20, pady=5)
         
@@ -416,9 +405,6 @@ class NexusLearnUnifiedApp:
             self.push_global_broadcast({"action": "PRIVATE_ALERT", "target": t, "message": m})
             self.ent_dm_txt.delete(0, tk.END)
 
-    # =========================================================================
-    # STUDENT PIPELINE MODULES
-    # =========================================================================
     def load_student_login(self):
         if hasattr(self, 'gateway_frame') and self.gateway_frame.winfo_exists():
             self.gateway_frame.destroy()
@@ -469,14 +455,12 @@ class NexusLearnUnifiedApp:
         tk.Label(s_dock, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.RIGHT, padx=10)
 
         threading.Thread(target=self.student_sync_thread, daemon=True).start()
-        threading.Thread(target=self.heartbeat_broadcast_loop, args=("Student", "Attending Lesson"), daemon=True).start()
 
     def dispatch_student_emote(self, emote, action_name):
         lbl = tk.Label(self.s_stage, text=emote, font=("Helvetica", 36), bg="#1C2541", fg="#5BC0BE")
         lbl.place(relx=0.8, rely=0.7)
         self.root.after(2000, lbl.destroy)
         
-        # Mirror emote signature packets seamlessly down cloud mesh layers
         def push_signal():
             try:
                 requests.post(SECURE_CLOUD_ENDPOINT, json={
@@ -493,21 +477,23 @@ class NexusLearnUnifiedApp:
         last_seen_id = 0
         while True:
             time.sleep(1.5)
-            self.cursor.execute("SELECT id, sender, recipient, message FROM chat_logs WHERE id > ? AND session_id=?", (last_seen_id, self.active_session_pin))
-            entries = self.cursor.fetchall()
-            
-            for eid, sender, recipient, msg in entries:
-                last_seen_id = eid
-                if recipient == "BROADCAST":
-                    if msg == "STATE:BREAK_START":
-                        self.root.after(0, self.student_render_break)
-                    elif msg == "STATE:BREAK_END":
-                        self.root.after(0, self.student_clear_break)
-                    elif msg.startswith("EXAM_LAUNCH:"):
-                        payload = msg.split(":", 1)[1]
-                        self.root.after(0, self.student_force_cbt, payload)
-                elif recipient == self.student_name and sender == "TEACHER":
-                    self.root.after(0, lambda m=msg: messagebox.showinfo("Private Prompt from Teacher", m))
+            try:
+                self.cursor.execute("SELECT id, sender, recipient, message FROM chat_logs WHERE id > ? AND session_id=?", (last_seen_id, self.active_session_pin))
+                entries = self.cursor.fetchall()
+                for eid, sender, recipient, msg in entries:
+                    last_seen_id = eid
+                    if recipient == "BROADCAST":
+                        if msg == "STATE:BREAK_START":
+                            self.root.after(0, self.student_render_break)
+                        elif msg == "STATE:BREAK_END":
+                            self.root.after(0, self.student_clear_break)
+                        elif msg.startswith("EXAM_LAUNCH:"):
+                            payload = msg.split(":", 1)[1]
+                            self.root.after(0, self.student_force_cbt, payload)
+                    elif recipient == self.student_name and sender == "TEACHER":
+                        self.root.after(0, lambda m=msg: messagebox.showinfo("Private Prompt from Teacher", m))
+            except Exception:
+                pass
 
     def student_render_break(self):
         self.s_break_overlay = tk.Frame(self.root, bg="#0B132B")
@@ -543,7 +529,6 @@ class NexusLearnUnifiedApp:
             tk.Button(btn_pane, text=clean_opt, font=("Helvetica", 11), bg="#1C2541", fg="#FFFFFF", width=35, command=lambda o=clean_opt: self.student_submit_cbt(o)).pack(pady=5)
 
     def student_submit_cbt(self, selected_option):
-        # Sync selected option coordinates into our global server mesh array
         def report():
             try:
                 requests.post(SECURE_CLOUD_ENDPOINT, json={
@@ -559,14 +544,6 @@ class NexusLearnUnifiedApp:
         messagebox.showinfo("Success", f"Assessment response '{selected_option}' transmitted successfully.")
         self.cbt_frame.destroy()
         self.s_work.pack(fill="both", expand=True)
-
-    # =========================================================================
-    # TELEMETRY BROADCAST SIGNALS
-    # =========================================================================
-    def heartbeat_broadcast_loop(self, role, default_action):
-        while True:
-            # Standby telemetry hook for multi-node deployments
-            time.sleep(5)
 
 if __name__ == "__main__":
     root = tk.Tk()
