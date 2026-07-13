@@ -1,374 +1,409 @@
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import sqlite3
+import datetime
 import random
 import string
-import time
-import json
-import os
+import sqlite3
 import threading
+import json
+import tkinter as tk
+from tkinter import messagebox, ttk
+from flask import Flask, jsonify, request, render_template_string
+from flask_cors import CORS
 
-# Check and map external video dependencies
-try:
-    import cv2
-    from PIL import Image, ImageTk
-    OPENCV_AVAILABLE = True
-except ImportError:
-    OPENCV_AVAILABLE = False
+# Initialize Flask App for Web Connectivity
+server = Flask(__name__)
+CORS(server)
 
-# Local App Configurations
-NOTES_JSON_FILE = "nexus_notes_vault.json"
-DATABASE_FILE = "nexus_workspace_system.db"
+DB_FILE = "nexuslearn_system.db"
 
-class NexusLearnCompleteApp:
+def get_db_connection():
+    """Helper function to open connection and immediately enable WAL mode."""
+    conn = sqlite3.connect(DB_FILE, timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
+
+# Embedded HTML string containing the responsive logo, progress bar, and founder tags
+LOADING_PAGE_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusLearn // Synchronizing...</title>
+    <style>
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #050811;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #FFFFFF; display: flex; justify-content: center; align-items: center;
+        }
+        .loading-container {
+            text-align: center; width: 90%; max-width: 500px;
+            padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center; z-index: 10;
+        }
+        .logo-placeholder {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728);
+            border-radius: 20px; display: flex; justify-content: center;
+            align-items: center; font-size: 40px; font-weight: bold;
+            color: #050811; margin-bottom: 10px;
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+        }
+        h1.app-name {
+            color: #D4AF37; font-size: 2.5rem; margin: 0 0 5px 0;
+            letter-spacing: 3px; text-transform: uppercase;
+        }
+        .progress-box { width: 100%; margin: 30px 0; }
+        .progress-bar {
+            width: 100%; height: 10px; background-color: #1F2937;
+            border-radius: 5px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #BF953F, #FCF6BA, #D4AF37);
+            width: 0%; transition: width 0.05s linear;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+        .percentage {
+            color: #D4AF37; font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem; margin-top: 10px; font-weight: bold;
+        }
+        .about-section {
+            background-color: #0F1626; border-radius: 12px; padding: 20px;
+            border: 1px solid rgba(212, 175, 55, 0.1); width: 100%;
+            box-sizing: border-box; text-align: left;
+        }
+        .about-section h2 { color: #D4AF37; font-size: 1.2rem; margin-top: 0; margin-bottom: 10px; }
+        .about-section p { color: #9CA3AF; font-size: 0.95rem; line-height: 1.6; margin: 0; }
+        .fixed-founder {
+            position: fixed; bottom: 20px; left: 20px;
+            font-size: 0.8rem; color: #6C757D; z-index: 5;
+        }
+        .fixed-founder strong { color: #9CA3AF; }
+    </style>
+</head>
+<body>
+    <div class="loading-container">
+        <div class="logo-placeholder">N</div>
+        <h1 class="app-name">NexusLearn</h1>
+        <div class="progress-box">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="percentage" id="percentageText">0%</div>
+        </div>
+        <div class="about-section">
+            <h2>About the App</h2>
+            <p>Connecting minds globally. NexusLearn is the premium transmission hub empowering teachers and students with real-time, global video communication for seamless learning experiences across borders.</p>
+        </div>
+    </div>
+    <div class="fixed-founder">
+        produced / founded by <strong>Talabi David Adeoluwa</strong>
+    </div>
+    <script>
+        let progress = 0;
+        const fill = document.getElementById('progressFill');
+        const text = document.getElementById('percentageText');
+        function updateLoading() {
+            progress += 1;
+            fill.style.width = progress + '%';
+            text.innerText = progress + '%';
+            if (progress < 100) {
+                setTimeout(updateLoading, 30);
+            } else {
+                text.innerText = "COMPLETE // SYNCHRONIZED";
+            }
+        }
+        updateLoading();
+    </script>
+</body>
+</html>
+"""
+
+# =====================================================================
+# BACKEND ROUTING TIERS
+# =====================================================================
+
+@server.route('/', methods=['GET'])
+def serve_loading_index():
+    """Serves your responsive loading page on the default server address."""
+    return render_template_string(LOADING_PAGE_HTML)
+
+@server.route('/api/client/heartbeat', methods=['POST'])
+def handle_web_heartbeat():
+    data = request.json or {}
+    username = data.get("username", "Unknown User")
+    role = data.get("role", "Student")
+    action = data.get("action", "Idling")
+    session_id = data.get("session_id", "GLOBAL_NODE")
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        log_msg = f"SESSION_START:{role} | {username} is currently {action}"
+        cursor.execute(
+            "INSERT INTO chat_logs (session_id, message, timestamp) VALUES (?, ?, ?)",
+            (session_id, log_msg, now_str)
+        )
+        conn.commit()
+    return jsonify({"status": "Core synchronized", "timestamp": now_str})
+
+@server.route('/api/client/verify-pin', methods=['POST'])
+def verify_teacher_pin():
+    data = request.json or {}
+    pin = data.get("pin", "").strip()
+    now = datetime.datetime.now()
+    
+    with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM teachers WHERE auth_pin = ?", (pin,))
+        teacher = cursor.fetchone()
+        
+        if not teacher:
+            return jsonify({"status": "REJECTED", "message": "Invalid credentials code."}), 401
+        if teacher['payment_status'] != 'Paid':
+            return jsonify({"status": "REJECTED", "message": "Subscription inactive. Payment required."}), 403
+            
+        expiry = datetime.datetime.strptime(teacher['expiration_timestamp'], '%Y-%m-%d %H:%M:%S')
+        if now > expiry:
+            return jsonify({"status": "REJECTED", "message": "Token lifespan has expired."}), 403
+            
+        return jsonify({
+            "status": "GRANTED",
+            "username": teacher['username'],
+            "expires_at": teacher['expiration_timestamp']
+        })
+
+@server.route('/api/admin/logs', methods=['GET'])
+def get_admin_logs():
+    with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 15")
+        logs = [dict(row) for row in cursor.fetchall()]
+    return jsonify(logs)
+
+@server.route('/api/admin/generate-pin', methods=['POST'])
+def admin_generate_pin():
+    data = request.json or {}
+    pin = data.get("pin")
+    hours = int(data.get("hours", 720))
+    username = f"web_token_{pin}"
+    expiration_str = (datetime.datetime.now() + datetime.timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+    
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
+                (username, "SYSTEM_DEFAULT", pin, "Paid", expiration_str)
+            )
+            conn.commit()
+        return jsonify({"status": "SUCCESS", "message": f"Token saved. Expiry: {expiration_str}"})
+    except sqlite3.IntegrityError:
+        return jsonify({"status": "COLLISION", "message": "Token generation anomaly. Try again."}), 409
+
+@server.route('/api/admin/override', methods=['POST'])
+def admin_override_account():
+    data = request.json or {}
+    teacher = data.get("username")
+    status = data.get("status")
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE teachers SET payment_status = ? WHERE username = ?", (status, teacher))
+        conn.commit()
+        rows_changed = cursor.rowcount
+        
+    if rows_changed == 0:
+        return jsonify({"status": "NOT_FOUND", "message": "Educator profile identity doesn't exist."}), 404
+    return jsonify({"status": "SUCCESS", "message": f"Access tier changed to {status}."})
+
+def start_server():
+    server.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
+
+# =====================================================================
+# TKINTER CORE INTEL LAYERS
+# =====================================================================
+
+class NexusLearnAdminConsole:
     def __init__(self, root):
         self.root = root
-        self.root.title("NexusLearn Suite // Enterprise Unified Desktop")
-        self.root.geometry("1440x900")
-        self.root.configure(bg="#050811")
-        self.root.protocol("WM_DELETE_WINDOW", self.on_application_exit)
+        self.root.title("NexusLearn // Master Administrative Intelligence")
+        self.root.geometry("1100x650")
+        self.root.configure(bg="#0B132B")
         
-        # System State Engines
-        self.user_name = "User_Node"
-        self.active_session_pin = ""
-        self.local_cam_on = True
-        self.local_mic_on = True
-        self.current_playing_track = "No Music File Loaded"
-        self.system_active = True
+        self.init_admin_database()
         
-        # Hardware Capture Resources
-        self.video_capture_source = None
-        self.camera_thread = None
-        self.data_lock = threading.Lock()
-        
-        # Initialize Core Layers
-        self.init_local_databases()
-        self.ensure_flatfiles_exist()
-        self.apply_theme_styles()
-        self.render_boot_splash()
-
-    # ==========================================
-    # DATA & FILE STORAGE DECK MATRIX
-    # ==========================================
-    def init_local_databases(self):
-        try:
-            self.conn = sqlite3.connect(DATABASE_FILE, check_same_thread=False)
-            self.cursor = self.conn.cursor()
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS notes_archive (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT UNIQUE, content TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS chat_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    sender TEXT, message TEXT, timestamp TEXT
-                )
-            """)
-            self.conn.commit()
-        except Exception as e:
-            print(f"Database Init Fault: {e}")
-
-    def ensure_flatfiles_exist(self):
-        if not os.path.exists(NOTES_JSON_FILE):
-            with open(NOTES_JSON_FILE, "w") as f:
-                json.dump({"vault_meta": "Nexus Learn Core", "data_vault": {}}, f, indent=4)
-
-    def apply_theme_styles(self):
         self.style = ttk.Style()
         self.style.theme_use("clam")
-        self.style.configure("TProgressbar", thickness=12, troughcolor="#1F2937", background="#D4AF37")
-
-    # ==========================================
-    # BOOT FLOW ENGINE & AUTH CHASSIS
-    # ==========================================
-    def render_boot_splash(self):
-        self.splash = tk.Frame(self.root, bg="#050811")
-        self.splash.place(x=0, y=0, relwidth=1, relheight=1)
+        self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
+        self.style.map("Treeview", background=[('selected', '#5BC0BE')])
         
-        tk.Label(self.splash, text="▲\nNEXUSLEARN", font=("Helvetica", 40, "bold"), bg="#050811", fg="#D4AF37").pack(expand=True)
-        self.lbl_load = tk.Label(self.splash, text="Connecting UI Framework Components...", font=("Courier", 10), bg="#050811", fg="#9CA3AF")
-        self.lbl_load.pack(pady=5)
-        
-        self.pbar = ttk.Progressbar(self.splash, orient="horizontal", length=400, mode="determinate", style="TProgressbar")
-        self.pbar.pack(pady=40)
-        
-        threading.Thread(target=self.run_async_boot, daemon=True).start()
+        self.build_layout()
+        self.refresh_all_monitors()
+        self.auto_refresh_loop()
 
-    def run_async_boot(self):
-        for i in range(1, 101):
-            if not self.system_active: return
-            time.sleep(0.007)
-            self.root.after(0, lambda v=i: self.pbar.config(value=v))
-        self.root.after(0, self.render_portal_gateways)
+    def init_admin_database(self):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS teachers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    auth_pin TEXT UNIQUE NOT NULL,
+                    payment_status TEXT DEFAULT 'Unpaid',
+                    expiration_timestamp DATETIME
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chat_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    message TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
 
-    def render_portal_gateways(self):
-        if hasattr(self, 'splash') and self.splash.winfo_exists():
-            self.splash.destroy()
+    def generate_unique_secure_pin(self):
+        while True:
+            digits = "".join(random.choices(string.digits, k=4))
+            letters = "".join(random.choices(string.ascii_uppercase, k=2))
+            pin = digits + letters
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
+                if not cursor.fetchone():
+                    return pin
+
+    def register_and_expire_pin(self):
+        username = self.ent_user.get().strip()
+        password = self.ent_pass.get().strip()
+        payment = self.combo_payment.get()
+        hours_valid = self.ent_expiry.get().strip()
+        
+        if not username or not password or not hours_valid:
+            messagebox.showerror("Error", "All parameter windows must be completely assigned.")
+            return
+        try:
+            hours = int(hours_valid)
+        except ValueError:
+            messagebox.showerror("Error", "Expiry duration value must be an integer (Hours).")
+            return
             
-        self.gateway = tk.Frame(self.root, bg="#050811")
-        self.gateway.pack(expand=True)
+        auth_pin = self.generate_unique_secure_pin()
+        expiration_time = datetime.datetime.now() + datetime.timedelta(hours=hours)
+        expiration_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S')
         
-        tk.Label(self.gateway, text="NexusLearn Access Terminal", font=("Helvetica", 26, "bold"), bg="#050811", fg="#FFFFFF").pack(pady=10)
-        tk.Label(self.gateway, text="REAL-TIME UNIFIED INTERACTIVE WORKSPACE ENVIRONMENT", font=("Helvetica", 9, "bold"), bg="#050811", fg="#9CA3AF").pack(pady=5)
-        
-        tk.Button(self.gateway, text="[ Host Workspace as Instructor ]", command=lambda: self.setup_auth_node(True), bg="#D4AF37", fg="#050811", font=("Helvetica", 11, "bold"), width=38, pady=12, border=0, cursor="hand2").pack(pady=10)
-        tk.Button(self.gateway, text="[ Join Active Learning Node ]", command=lambda: self.setup_auth_node(False), bg="#0F1626", fg="#D4AF37", font=("Helvetica", 11, "bold"), width=38, pady=12, highlightbackground="#D4AF37", highlightthickness=1, border=0, cursor="hand2").pack(pady=10)
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
+                    (username, password, auth_pin, payment, expiration_str)
+                )
+                conn.commit()
+            messagebox.showinfo("PIN Live", f"Authorization Node Written!\n\nGenerated PIN: {auth_pin}\nExpires: {expiration_str}")
+            self.ent_user.delete(0, tk.END)
+            self.ent_pass.delete(0, tk.END)
+            self.refresh_all_monitors()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Registry Collision", "Target account identifier already exists inside network arrays.")
 
-    def setup_auth_node(self, is_teacher):
-        self.gateway.destroy()
-        self.auth_frame = tk.Frame(self.root, bg="#050811")
-        self.auth_frame.pack(expand=True)
-        
-        lbl_head = "Instructor Hub setup" if is_teacher else "Student Secure Connection Node"
-        tk.Label(self.auth_frame, text=lbl_head, font=("Helvetica", 20, "bold"), bg="#050811", fg="#D4AF37").pack(pady=20)
-        
-        tk.Label(self.auth_frame, text="Set Handle / System Display Username:", bg="#050811", fg="#FFFFFF", font=("Helvetica", 11)).pack(anchor="w", pady=2)
-        self.ent_user = tk.Entry(self.auth_frame, font=("Helvetica", 12), width=35, bg="#000000", fg="#FFFFFF", insertbackground="white")
-        self.ent_user.pack(pady=5)
-        self.ent_user.insert(0, "Instructor_Alpha" if is_teacher else "Student_Peer_Node")
-        
-        if is_teacher:
-            self.active_session_pin = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-            box = tk.LabelFrame(self.auth_frame, text="Generated Access System PIN", bg="#050811", fg="#9CA3AF", padx=10, pady=10)
-            box.pack(pady=15, fill="x")
-            tk.Label(box, text=self.active_session_pin, font=("Courier", 18, "bold"), bg="#050811", fg="#D4AF37").pack()
-        else:
-            tk.Label(self.auth_frame, text="Provide Active Room Access PIN:", bg="#050811", fg="#FFFFFF", font=("Helvetica", 11)).pack(anchor="w", pady=2)
-            self.ent_pin = tk.Entry(self.auth_frame, font=("Helvetica", 12), width=35, bg="#000000", fg="#FFFFFF", insertbackground="white")
-            self.ent_pin.pack(pady=5)
-            self.ent_pin.insert(0, "A1B2C3")
+    def refresh_all_monitors(self):
+        for item in self.tree_accounts.get_children():
+            self.tree_accounts.delete(item)
             
-        tk.Button(self.auth_frame, text="Initialize Active Workspace Suite", command=lambda: self.boot_live_workspace(is_teacher), bg="#D4AF37", fg="#050811", font=("Helvetica", 12, "bold"), width=32, pady=10, border=0, cursor="hand2").pack(pady=15)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
+            for row in cursor.fetchall():
+                self.tree_accounts.insert("", tk.END, values=row)
+                
+        for item in self.tree_live.get_children():
+            self.tree_live.delete(item)
+            
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
+            for row in cursor.fetchall():
+                self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
 
-    def boot_live_workspace(self, is_teacher):
-        self.user_name = self.ent_user.get().strip() or "User_Node"
-        if not is_teacher:
-            self.active_session_pin = self.ent_pin.get().strip().upper() or "A1B2C3"
-        self.auth_frame.destroy()
-        self.build_master_ui_grid()
-
-    # ==========================================
-    # CORE INTERACTIVE RUNTIME APP WINDOW
-    # ==========================================
-    def build_master_ui_grid(self):
-        self.main_suite = tk.Frame(self.root, bg="#050811")
-        self.main_suite.pack(fill="both", expand=True)
-        
-        # Top Data Tracking Panel Strip
-        header = tk.Frame(self.main_suite, bg="#0F1626", height=55)
-        header.pack(fill="x", side=tk.TOP)
-        status_text = f"🔴 NEXUS ROOM ACTIVE // INTERFACE PIN: {self.active_session_pin} // USER HANDLE: {self.user_name}"
-        tk.Label(header, text=status_text, font=("Helvetica", 11, "bold"), bg="#0F1626", fg="#D4AF37").pack(side=tk.LEFT, padx=25)
-        
-        # ─── DYNAMIC TRIPLE SPLIT SASH PANED ENVIRONMENT ───
-        self.paned_window = tk.PanedWindow(self.main_suite, orient=tk.HORIZONTAL, bg="#050811", sashwidth=10, sashrelief=tk.RAISED)
-        self.paned_window.pack(fill="both", expand=True, padx=15, pady=15)
-        
-        # Left Deck: A/V Cameras Stream Box Module
-        av_frame = tk.Frame(self.paned_window, bg="#050811")
-        self.paned_window.add(av_frame, minsize=500)
-        av_frame.rowconfigure(0, weight=1)
-        av_frame.rowconfigure(1, weight=1)
-        av_frame.columnconfigure(0, weight=1)
-        
-        self.box_local_cam = tk.LabelFrame(av_frame, text="Local Stream Broadcast Feed Panel", bg="#0F1626", fg="#FFFFFF", font=("Helvetica", 10, "bold"))
-        self.box_local_cam.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
-        self.lbl_local_video = tk.Label(self.box_local_cam, text="Piping local streaming chassis controllers...", bg="#000000", fg="#D4AF37")
-        self.lbl_local_video.pack(fill="both", expand=True, padx=6, pady=6)
-        
-        self.box_remote_cam = tk.LabelFrame(av_frame, text="Remote Inter-Peer Matrix Overlay Deck", bg="#0F1626", fg="#D4AF37", font=("Helvetica", 10, "bold"))
-        self.box_remote_cam.grid(row=1, column=0, sticky="nsew", padx=4, pady=4)
-        self.lbl_remote_video = tk.Label(self.box_remote_cam, text="🔊 ROOM FEED MONITORS ENABLED // P2P NETWORK STREAM SECURE", bg="#000000", fg="#9CA3AF", font=("Courier", 10))
-        self.lbl_remote_video.pack(fill="both", expand=True, padx=6, pady=6)
-        
-        # Bottom Hardware Controls Docking Bar Panel
-        ctrl_tray = tk.Frame(av_frame, bg="#0F1626", height=70)
-        ctrl_tray.grid(row=2, column=0, sticky="ew", padx=4, pady=4)
-        tk.Button(ctrl_tray, text="📷 Toggle Camera", command=self.toggle_camera, bg="#050811", fg="#FFFFFF", font=("Helvetica", 9, "bold"), border=0, padx=12, pady=6).pack(side=tk.LEFT, padx=10, pady=12)
-        tk.Button(ctrl_tray, text="🎤 Toggle Mic", command=self.toggle_mic, bg="#050811", fg="#FFFFFF", font=("Helvetica", 9, "bold"), border=0, padx=12, pady=6).pack(side=tk.LEFT, padx=5, pady=12)
-        
-        # Audio Deck Sound Card System Panel Importer Component
-        audio_sub = tk.LabelFrame(ctrl_tray, text="Music Deck Importer Engine", bg="#0F1626", fg="#FFFFFF", font=("Helvetica", 9))
-        audio_sub.pack(side=tk.RIGHT, padx=10, pady=4)
-        self.lbl_track_info = tk.Label(audio_sub, text=self.current_playing_track, font=("Helvetica", 9, "italic"), bg="#0F1626", fg="#9CA3AF")
-        self.lbl_track_info.pack(side=tk.LEFT, padx=10)
-        tk.Button(audio_sub, text="Import Track", command=self.import_track, font=("Helvetica", 8, "bold"), bg="#050811", fg="#D4AF37", border=0, padx=8).pack(side=tk.RIGHT, padx=5, pady=2)
-
-        # Center Deck: FULLY INTEGRATED LIVE CHAT ROOM MODULE
-        chat_frame = tk.LabelFrame(self.paned_window, text="💬 Live Room Messaging Deck", bg="#0F1626", fg="#D4AF37", font=("Helvetica", 11, "bold"))
-        self.paned_window.add(chat_frame, minsize=380)
-        
-        self.chat_display = tk.Text(chat_frame, bg="#000000", fg="#FFFFFF", font=("Helvetica", 10), state=tk.DISABLED, wrap=tk.WORD)
-        self.chat_display.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        chat_entry_row = tk.Frame(chat_frame, bg="#0F1626")
-        chat_entry_row.pack(fill="x", padx=10, pady=10)
-        self.ent_msg = tk.Entry(chat_entry_row, bg="#000000", fg="#FFFFFF", insertbackground="white", font=("Helvetica", 11))
-        self.ent_msg.pack(side=tk.LEFT, fill="x", expand=True, padx=2)
-        self.ent_msg.bind("<Return>", lambda event: self.send_chat_message())
-        tk.Button(chat_entry_row, text="Send", command=self.send_chat_message, bg="#D4AF37", fg="#050811", font=("Helvetica", 9, "bold"), border=0, padx=15).pack(side=tk.RIGHT, padx=2)
-
-        # Right Deck: PERSISTENT TEXT STORAGE AND NOTES EXTRACTION HUB
-        tools_frame = tk.LabelFrame(self.paned_window, text="📎 Resizable File Extract Document Engine", bg="#0F1626", fg="#D4AF37", font=("Helvetica", 11, "bold"))
-        self.paned_window.add(tools_frame, minsize=400)
-        
-        tk.Label(tools_frame, text="File Document Lookup Key Identifier:", bg="#0F1626", fg="#E5E7EB", font=("Helvetica", 10)).pack(anchor="w", padx=12, pady=5)
-        self.ent_file_tag = tk.Entry(tools_frame, bg="#000000", fg="#FFFFFF", insertbackground="white", font=("Helvetica", 11))
-        self.ent_file_tag.pack(fill="x", padx=12, pady=2)
-        self.ent_file_tag.insert(0, "Session_Extract_Data")
-        
-        self.notepad = tk.Text(tools_frame, bg="#000000", fg="#FFFFFF", insertbackground="white", wrap=tk.WORD, font=("Consolas", 11), undo=True)
-        self.notepad.pack(fill="both", expand=True, padx=12, pady=8)
-        
-        disk_row = tk.Frame(tools_frame, bg="#0F1626")
-        disk_row.pack(fill="x", padx=12, pady=12)
-        tk.Button(disk_row, text="💾 Save/Extract Data Archive", command=self.save_extracted_data, bg="#D4AF37", fg="#050811", font=("Helvetica", 10, "bold"), pady=8, border=0).pack(side=tk.LEFT, fill="x", expand=True, padx=3)
-        tk.Button(disk_row, text="📂 Load Data Archive", command=self.load_extracted_data, bg="#050811", fg="#FFFFFF", font=("Helvetica", 10), pady=8, border=0).pack(side=tk.LEFT, fill="x", expand=True, padx=3)
-
-        # Launch Active System Polling Hardware Hooks
-        self.load_historical_chat_records()
-        if OPENCV_AVAILABLE:
-            self.video_capture_source = cv2.VideoCapture(0)
-            self.camera_thread = threading.Thread(target=self.run_hardware_camera_stream, daemon=True)
-            self.camera_thread.start()
-        else:
-            self.lbl_local_video.config(text="⚠️ Camera hardware emulation online.\nRunning standard video engine framework.", fg="#E63946")
-
-    # ==========================================
-    # MEDIA BROADCAST LOOP & EVENT CONTROLS
-    # ==========================================
-    def run_hardware_camera_stream(self):
-        while self.system_active:
-            if self.local_cam_on and self.video_capture_source and self.video_capture_source.isOpened():
-                ret, frame = self.video_capture_source.read()
-                if ret:
-                    frame = cv2.flip(frame, 1)
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    h = max(100, self.box_local_cam.winfo_height() - 40)
-                    w = max(100, self.box_local_cam.winfo_width() - 20)
-                    try:
-                        img = Image.fromarray(frame).resize((w, h), Image.Resampling.LANCZOS)
-                        img_tk = ImageTk.PhotoImage(image=img)
-                        if self.system_active:
-                            self.root.after(0, lambda img_payload=img_tk: self.flush_camera_frame(img_payload))
-                    except Exception: pass
-            time.sleep(0.03)
-
-    def flush_camera_frame(self, img_payload):
-        if self.system_active and hasattr(self, 'lbl_local_video') and self.lbl_local_video.winfo_exists():
-            self.lbl_local_video.config(image=img_payload, text="")
-            self.lbl_local_video.image = img_payload
-
-    def toggle_camera(self):
-        self.local_cam_on = not self.local_cam_on
-        if not self.local_cam_on:
-            self.lbl_local_video.config(image="", text="[ ❌ LOCAL WEBCAM DISCONNECTED (BLOCKED) ]", bg="#1A050A", fg="#9CA3AF")
-        elif not OPENCV_AVAILABLE:
-            self.lbl_local_video.config(text="🎥 CHASSIS FEED OUT: LOCAL HD WEBCAM TRANSMITTING", bg="#000000", fg="#FFFFFF")
-
-    def toggle_mic(self):
-        self.local_mic_on = not self.local_mic_on
-        messagebox.showinfo("Audio Engine Manager", f"Microphone stream configuration switched! Active state = {self.local_mic_on}")
-
-    def import_track(self):
-        path = filedialog.askopenfilename(filetypes=[("Audio Files Mapping", "*.mp3 *.wav *.ogg *.m4a")])
-        if path:
-            self.current_playing_track = os.path.basename(path)
-            self.lbl_track_info.config(text=f"▶ {self.current_playing_track}", fg="#D4AF37")
-
-    # ==========================================
-    # ENGINE LIVE CHAT OPERATION MODULE
-    # ==========================================
-    def send_chat_message(self):
-        msg = self.ent_msg.get().strip()
-        if not msg: return
-        t_stamp = time.strftime('%H:%M')
-        
+    def auto_refresh_loop(self):
         try:
-            self.cursor.execute("INSERT INTO chat_logs (sender, message, timestamp) VALUES (?, ?, ?)", (self.user_name, msg, t_stamp))
-            self.conn.commit()
-        except Exception: pass
+            self.refresh_all_monitors()
+        except Exception:
+            pass
+        self.root.after(3000, self.auto_refresh_loop)
+
+    def build_layout(self):
+        header = tk.Frame(self.root, bg="#1C2541", height=60)
+        header.pack(fill="x")
+        header.pack_propagate(False)
         
-        self.append_message_to_display(self.user_name, msg, t_stamp)
-        self.ent_msg.delete(0, tk.END)
+        tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT COMMAND HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
+        tk.Label(header, text="Producer Access Layer", font=("Helvetica", 10, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.RIGHT, padx=20)
 
-    def load_historical_chat_records(self):
-        try:
-            self.cursor.execute("SELECT sender, message, timestamp FROM chat_logs ORDER BY id ASC")
-            for row in self.cursor.fetchall():
-                self.append_message_to_display(row[0], row[1], row[2])
-        except Exception: pass
-
-    def append_message_to_display(self, sender, msg, timestamp):
-        self.chat_display.config(state=tk.NORMAL)
-        color_tag = "gold" if sender == self.user_name else "gray"
-        self.chat_display.insert(tk.END, f"[{timestamp}] ", "time_style")
-        self.chat_display.insert(tk.END, f"{sender}: ", color_tag)
-        self.chat_display.insert(tk.END, f"{msg}\n", "msg_style")
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
         
-        self.chat_display.tag_config("time_style", foreground="#6B7280")
-        self.chat_display.tag_config("gold", foreground="#D4AF37", font=("Helvetica", 10, "bold"))
-        self.chat_display.tag_config("gray", foreground="#9CA3AF", font=("Helvetica", 10, "bold"))
-        self.chat_display.tag_config("msg_style", foreground="#FFFFFF")
+        tab1 = tk.Frame(notebook, bg="#0B132B")
+        notebook.add(tab1, text=" Credentials & Account Ledgers ")
         
-        self.chat_display.config(state=tk.DISABLED)
-        self.chat_display.see(tk.END)
-
-    # ==========================================
-    # ASYNC HIGH EXTRACT TRANSACTION HOOKS
-    # ==========================================
-    def save_extracted_data(self):
-        tag = self.ent_file_tag.get().strip() or "Global_Cache"
-        body = self.notepad.get("1.0", tk.END).strip()
+        form_p = tk.LabelFrame(tab1, text=" Authorize New Teacher Profile ", bg="#1C2541", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
+        form_p.pack(fill="x", padx=10, pady=10)
         
-        def run_write_task():
-            with self.data_lock:
-                try:
-                    self.cursor.execute("INSERT OR REPLACE INTO notes_archive (title, content) VALUES (?, ?)", (tag, body))
-                    self.conn.commit()
-                    with open(NOTES_JSON_FILE, "r") as f: metadata = json.load(f)
-                    metadata["data_vault"][tag] = {"text": body, "author": self.user_name, "epoch": time.time()}
-                    with open(NOTES_JSON_FILE, "w") as f: json.dump(metadata, f, indent=4)
-                    self.root.after(0, lambda: messagebox.showinfo("Storage Engine", "Workspace elements completely extracted and synced!"))
-                except Exception as e:
-                    self.root.after(0, lambda err=e: messagebox.showerror("Fault Trace", f"Transaction refused: {err}"))
-        threading.Thread(target=run_write_task, daemon=True).start()
-
-    def load_extracted_data(self):
-        tag = self.ent_file_tag.get().strip()
+        tk.Label(form_p, text="Account ID:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.ent_user = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_user.grid(row=0, column=1, padx=5, pady=5)
         
-        def run_read_task():
-            with self.data_lock:
-                self.cursor.execute("SELECT content FROM notes_archive WHERE title=?", (tag,))
-                record = self.cursor.fetchone()
-                if record:
-                    self.root.after(0, lambda t=record[0]: self.refresh_pad(t))
-                    return
-                try:
-                    if os.path.exists(NOTES_JSON_FILE):
-                        with open(NOTES_JSON_FILE, "r") as f: metadata = json.load(f)
-                        if tag in metadata["data_vault"]:
-                            self.root.after(0, lambda t=metadata["data_vault"][tag]["text"]: self.refresh_pad(t))
-                            return
-                except Exception: pass
-                self.root.after(0, lambda: messagebox.showwarning("System Info", "No data records found under this lookup parameter."))
-        threading.Thread(target=run_read_task, daemon=True).start()
+        tk.Label(form_p, text="System Key:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.ent_pass = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_pass.grid(row=0, column=3, padx=5, pady=5)
+        
+        tk.Label(form_p, text="Payment Status:", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.combo_payment = ttk.Combobox(form_p, values=["Paid", "Unpaid"], state="readonly", width=12)
+        self.combo_payment.current(1)
+        self.combo_payment.grid(row=1, column=1, padx=5, pady=5)
+        
+        tk.Label(form_p, text="Lifespan (Hours):", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        self.ent_expiry = tk.Entry(form_p, width=10, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_expiry.insert(0, "720") 
+        self.ent_expiry.grid(row=1, column=3, padx=5, pady=5)
+        
+        btn_commit = tk.Button(form_p, text="Commit & Generate PIN", command=self.register_and_expire_pin, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
+        btn_commit.grid(row=0, column=4, rowspan=2, padx=20, pady=5)
+        
+        self.tree_accounts = ttk.Treeview(tab1, columns=("u", "p", "f", "e"), show="headings")
+        self.tree_accounts.heading("u", text="Educator Identity Handle")
+        self.tree_accounts.heading("p", text="Permanent System PIN")
+        self.tree_accounts.heading("f", text="Financial Log State")
+        self.tree_accounts.heading("e", text="Expiration Deadline Bounds")
+        self.tree_accounts.pack(fill="both", expand=True, padx=10, pady=5)
 
-    def refresh_pad(self, content):
-        self.notepad.delete("1.0", tk.END)
-        self.notepad.insert(tk.END, content)
+        tab2 = tk.Frame(notebook, bg="#0B132B")
+        notebook.add(tab2, text=" Live Operations Stream ")
+        
+        tk.Label(tab2, text="Real-Time Network Activity Feed", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", padx=10, pady=5)
+        
+        self.tree_live = ttk.Treeview(tab2, columns=("sid", "title", "t"), show="headings")
+        self.tree_live.heading("sid", text="Session Identifier")
+        self.tree_live.heading("title", text="Live User Activity Description")
+        self.tree_live.heading("t", text="Log Event Timestamp")
+        self.tree_live.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        btn_refresh = tk.Button(tab2, text="Force Global Data Re-Index", command=self.refresh_all_monitors, bg="#1C2541", fg="#5BC0BE")
+        btn_refresh.pack(pady=5)
 
-    def on_application_exit(self):
-        self.system_active = False
-        try:
-            if self.video_capture_source: self.video_capture_source.release()
-            self.conn.close()
-        except Exception: pass
-        self.root.destroy()
+        footer = tk.Frame(self.root, bg="#0B132B")
+        footer.pack(fill="x", side=tk.BOTTOM, pady=5)
+        tk.Label(footer, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.LEFT, padx=15)
 
 if __name__ == "__main__":
+    # Fire backend pipeline structures
+    threading.Thread(target=start_server, daemon=True).start()
+    
+    # Render Management Window Elements
     root = tk.Tk()
-    app = NexusLearnCompleteApp(root)
+    app = NexusLearnAdminConsole(root)
     root.mainloop()
