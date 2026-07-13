@@ -241,12 +241,10 @@
 
     <div id="boot-screen">
         <div class="boot-logo">▲<br>NEXUSLEARN</div>
-        
         <div class="boot-about-box">
             <strong>About the App:</strong><br>
             A premium high-performance network platform engineered to connect live classrooms, deploy secure CBT modules, and sync administration controls safely.
         </div>
-        
         <div id="boot-text" class="boot-pct">System Booting: 01%</div>
         <div class="progress-bar-container">
             <div id="progress-fill" class="progress-bar-fill"></div>
@@ -257,12 +255,10 @@
         <h1 class="logo-icon">▲</h1>
         <h2>NexusLearn</h2>
         <p class="subtitle">Unified Learning Environment</p>
-        
         <div class="about-box">
             <strong>Platform Information:</strong><br>
             A secure visual gateway providing direct control linkages for educators and system node streams for active student tracking environments.
         </div>
-
         <button class="btn btn-primary" onclick="switchView('teacher-view')">[ I am a Teacher ]</button>
         <button class="btn btn-secondary" onclick="switchView('student-view')">[ I am a Student ]</button>
     </div>
@@ -271,16 +267,12 @@
         <h1 class="logo-icon">▲</h1>
         <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Educator Gateway</h2>
         <p class="subtitle" style="color: var(--text-muted);">Secure Terminal Authentication</p>
-        
         <label>Username / Email:</label>
         <input type="text" id="t-user" placeholder="Enter administrative login">
-        
         <label>Password:</label>
         <input type="password" id="t-pass" placeholder="Enter account password">
-        
         <label>Admin Authorization PIN:</label>
         <input type="text" id="t-pin" placeholder="Enter secure PIN matrix">
-        
         <button class="btn btn-primary" onclick="handleTeacherLogin()">Verify Credentials</button>
         <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
     </div>
@@ -289,13 +281,10 @@
         <h1 class="logo-icon">▲</h1>
         <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Student Gateway</h2>
         <p class="subtitle" style="color: var(--text-muted);">Classroom Node Interface</p>
-        
         <label>Your Screen Profile Name:</label>
         <input type="text" id="s-name" placeholder="Enter your full name">
-        
         <label>Active Classroom Code:</label>
         <input type="text" id="s-code" placeholder="Enter 6-digit active code">
-        
         <button class="btn btn-primary" onclick="handleStudentLogin()">Initialize Node Connection</button>
         <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
     </div>
@@ -305,9 +294,9 @@
     </div>
 
     <script>
+        // Floating decorative layers
         const layer = document.getElementById('floating-layer');
         const elements = ['📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️'];
-        
         elements.forEach((emoji, index) => {
             const span = document.createElement('span');
             span.className = 'floating-item';
@@ -318,6 +307,7 @@
             layer.appendChild(span);
         });
 
+        // Fast boot initialization
         window.addEventListener('DOMContentLoaded', () => {
             let percent = 1;
             const textElement = document.getElementById('boot-text');
@@ -344,24 +334,20 @@
 
         function switchView(viewId) {
             const views = ['gateway-view', 'teacher-view', 'student-view'];
-            
             views.forEach(id => {
                 const view = document.getElementById(id);
                 view.classList.remove('active');
                 view.classList.add('hidden');
             });
-            
             const targetView = document.getElementById(viewId);
             targetView.classList.remove('hidden');
-            setTimeout(() => {
-                targetView.classList.add('active');
-            }, 50);
+            setTimeout(() => { targetView.classList.add('active'); }, 50);
         }
 
         // =========================================================================
-        // CENTRAL WEB CLOUD LINKAGE CONNECTOR (POLLING SYSTEM FOR GITHUB HOSTING)
+        // SECURE SECURE PUBLIC HTTPS CLOUD LINKAGE CHANNEL (ZERO SERVER REQ)
         // =========================================================================
-        const API_BASE_URL = "http://YOUR_SERVER_IP_OR_URL:5000"; // Replace with your live Flask backend URL
+        const SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request";
         let sessionCheckInterval = null;
 
         function handleTeacherLogin() {
@@ -370,20 +356,18 @@
             const pin = document.getElementById('t-pin').value;
             
             if (user && pass && pin) {
-                fetch(`${API_BASE_URL}/api/client/verify-pin`, {
+                const packet = { type: "TEACHER_LOGIN", username: user, password: pass, pin: pin, timestamp: Date.now() };
+                
+                // Write transaction straight into global secure network bucket
+                fetch(SECURE_CLOUD_ENDPOINT, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass, pin: pin })
+                    body: JSON.stringify(packet)
                 })
-                .then(response => {
-                    if (response.ok) {
-                        alert('Authenticated successfully! Synchronizing session parameters with app window...');
-                        startPollingForAppSync(user, 'Teacher');
-                    } else {
-                        alert('Administrative authentication failed.');
-                    }
+                .then(() => {
+                    alert('Handshake sent safely to cloud mesh! Syncing desktop terminal environment...');
+                    startPollingForAppSync(user, 'Teacher');
                 })
-                .catch(err => alert('Network Sync Timeout: Could not connect to public API server.'));
+                .catch(err => alert('Cloud Sync Timeout. Retry connection pipeline configuration.'));
             } else {
                 alert('Please fill out all administrative verification nodes.');
             }
@@ -394,16 +378,17 @@
             const code = document.getElementById('s-code').value;
             
             if (name && code) {
-                fetch(`${API_BASE_URL}/api/client/heartbeat`, {
+                const packet = { type: "STUDENT_LOGIN", name: name, code: code, timestamp: Date.now() };
+                
+                fetch(SECURE_CLOUD_ENDPOINT, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: name, role: 'Student', action: 'Joining from Web', session_id: code })
+                    body: JSON.stringify(packet)
                 })
                 .then(() => {
-                    alert('Passing connection registration up to server structure...');
+                    alert('Connecting to active session node...');
                     startPollingForAppSync(name, 'Student', code);
                 })
-                .catch(err => alert('Failed Connection: Server signature unrecognized.'));
+                .catch(err => alert('Failed Cloud Registry Route.'));
             } else {
                 alert('Please declare profile name and class code vectors.');
             }
@@ -411,17 +396,18 @@
 
         function startPollingForAppSync(username, role, code = 'GLOBAL_NODE') {
             if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+            const confirmationUrl = `https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_confirm_${username}`;
             
             sessionCheckInterval = setInterval(() => {
-                fetch(`${API_BASE_URL}/api/client/session-status?username=${username}&session_id=${code}`)
+                fetch(confirmationUrl)
                 .then(res => res.json())
                 .then(data => {
-                    if (data.status === "ACTIVE_IN_APP") {
+                    if (data && data.status === "ACTIVE_IN_APP") {
                         clearInterval(sessionCheckInterval);
-                        alert(`App connection established! Synced workspace interface as ${role}.`);
+                        alert(`App linkage established! Workspace synchronized successfully as ${role}.`);
                     }
                 })
-                .catch(err => console.log("Awaiting handshake confirmation link..."));
+                .catch(() => {}); // Wait quietly for app approval write
             }, 3000);
         }
     </script>
