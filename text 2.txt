@@ -11,18 +11,18 @@ from flask_cors import CORS
 
 # Initialize Flask App for Web Connectivity
 server = Flask(__name__)
-CORS(server) # Allows your GitHub page to connect securely
+CORS(server) # Allows your GitHub/Web pages to connect securely
 
 DB_FILE = "nexuslearn_system.db"
 
 def get_db_connection():
     """Helper function to open connection and immediately enable WAL mode."""
-    conn = sqlite3.connect(DB_FILE, timeout=20.0) # Extended timeout for web traffic
-    conn.execute("PRAGMA journal_mode=WAL;")      # Fixes the database lock issue
+    conn = sqlite3.connect(DB_FILE, timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
 # =====================================================================
-# BACKGROUND FLASK SERVER ENGINE (Receives data from your website)
+# BACKGROUND FLASK SERVER ENGINE (Web App Synchronization Layer)
 # =====================================================================
 
 @server.route('/api/client/heartbeat', methods=['POST'])
@@ -38,16 +38,6 @@ def handle_web_heartbeat():
     
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        # Ensure chat_logs table exists to catch web activity
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS chat_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT,
-                message TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        # Log the live action so the Tkinter dashboard can read it
         log_msg = f"SESSION_START:{role} | {username} is currently {action}"
         cursor.execute(
             "INSERT INTO chat_logs (session_id, message, timestamp) VALUES (?, ?, ?)",
@@ -88,13 +78,64 @@ def verify_teacher_pin():
             "expires_at": teacher['expiration_timestamp']
         })
 
+# --- NEW WEB-ADMIN INTERACTION ENDPOINTS ---
+
+@server.route('/api/admin/logs', methods=['GET'])
+def get_admin_logs():
+    """Fetches real logs for the web interface's monitor screen."""
+    with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 15")
+        logs = [dict(row) for row in cursor.fetchall()]
+    return jsonify(logs)
+
+@server.route('/api/admin/generate-pin', methods=['POST'])
+def admin_generate_pin():
+    """Saves a dynamic web-generated PIN to the master matrix."""
+    data = request.json or {}
+    pin = data.get("pin")
+    hours = int(data.get("hours", 720))
+    
+    # Create a generic placeholder profile for web-created standalone token
+    username = f"web_token_{pin}"
+    expiration_str = (datetime.datetime.now() + datetime.timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+    
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
+                (username, "SYSTEM_DEFAULT", pin, "Paid", expiration_str)
+            )
+            conn.commit()
+        return jsonify({"status": "SUCCESS", "message": f"Token saved. Expiry: {expiration_str}"})
+    except sqlite3.IntegrityError:
+        return jsonify({"status": "COLLISION", "message": "Token generation anomaly. Try again."}), 409
+
+@server.route('/api/admin/override', methods=['POST'])
+def admin_override_account():
+    """Modifies authorization arrays for any targeted teacher identifier directly."""
+    data = request.json or {}
+    teacher = data.get("username")
+    status = data.get("status") # 'Paid' or 'Unpaid'
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE teachers SET payment_status = ? WHERE username = ?", (status, teacher))
+        conn.commit()
+        rows_changed = cursor.rowcount
+        
+    if rows_changed == 0:
+        return jsonify({"status": "NOT_FOUND", "message": "Educator profile identity doesn't exist."}), 404
+    return jsonify({"status": "SUCCESS", "message": f"Access tier changed to {status}."})
+
 def start_server():
-    # Runs the network channel on port 5000 in the background
     server.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
 
 
 # =====================================================================
-# UPGRADED TKINTER MASTER ADMINISTRATIVE INTEL DESKTOP CONSOLE
+# TKINTER MASTER ADMINISTRATIVE INTEL DESKTOP CONSOLE
 # =====================================================================
 
 class NexusLearnAdminConsole:
@@ -113,7 +154,7 @@ class NexusLearnAdminConsole:
         
         self.build_layout()
         self.refresh_all_monitors()
-        self.auto_refresh_loop() # Live data polling thread
+        self.auto_refresh_loop()
 
     def init_admin_database(self):
         with get_db_connection() as conn:
@@ -140,7 +181,6 @@ class NexusLearnAdminConsole:
 
     def generate_unique_secure_pin(self):
         while True:
-            # Matches your 4 numbers + 2 letters request architecture
             digits = "".join(random.choices(string.digits, k=4))
             letters = "".join(random.choices(string.ascii_uppercase, k=2))
             pin = digits + letters
@@ -187,7 +227,6 @@ class NexusLearnAdminConsole:
             messagebox.showerror("Registry Collision", "Target account identifier already exists inside network arrays.")
 
     def refresh_all_monitors(self):
-        # 1. Refresh Accounts
         for item in self.tree_accounts.get_children():
             self.tree_accounts.delete(item)
             
@@ -197,7 +236,6 @@ class NexusLearnAdminConsole:
             for row in cursor.fetchall():
                 self.tree_accounts.insert("", tk.END, values=row)
                 
-            # 2. Refresh Live Monitor Stream
             for item in self.tree_live.get_children():
                 self.tree_live.delete(item)
             cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
@@ -205,7 +243,6 @@ class NexusLearnAdminConsole:
                 self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
 
     def auto_refresh_loop(self):
-        """Automatically updates tracking readouts every 3 seconds without freezing windows."""
         try:
             self.refresh_all_monitors()
         except Exception:
@@ -276,10 +313,7 @@ class NexusLearnAdminConsole:
         tk.Label(footer, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.LEFT, padx=15)
 
 if __name__ == "__main__":
-    # Spin up the Flask Server API in a separate back thread
     threading.Thread(target=start_server, daemon=True).start()
-    
-    # Run the Desktop UI
     root = tk.Tk()
     app = NexusLearnAdminConsole(root)
     root.mainloop()
