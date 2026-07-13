@@ -1,0 +1,443 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import sqlite3
+import random
+import string
+import time
+import datetime
+import threading
+
+class NexusLearnUnifiedApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("NexusLearn // Unified Learning Environment")
+        self.root.geometry("1000x680")
+        self.root.configure(bg="#0B132B")
+        
+        # State tracking matrices
+        self.student_name = ""
+        self.active_session_pin = ""
+        self.current_class_name = ""
+        self.is_break_active = False
+        self.break_time_left = 600
+        
+        # Central Database Initialization & Schema Checks
+        self.init_shared_database()
+        
+        # Treeview styling maps
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+        self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
+        self.style.map("Treeview", background=[('selected', '#5BC0BE')])
+        
+        # Launch High-Tech Boot Canvas Sequence
+        self.run_fast_loading_canvas()
+
+    def init_shared_database(self):
+        self.conn = sqlite3.connect("nexuslearn_system.db")
+        self.cursor = self.conn.cursor()
+        # Verify core tables are established
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teachers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                auth_pin TEXT UNIQUE NOT NULL,
+                payment_status TEXT DEFAULT 'Unpaid',
+                expiration_timestamp DATETIME
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT,
+                sender TEXT,
+                recipient TEXT,
+                message TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self.conn.commit()
+
+    def run_fast_loading_canvas(self):
+        self.load_frame = tk.Frame(self.root, bg="#0B132B")
+        self.load_frame.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        self.lbl_logo = tk.Label(self.load_frame, text="▲\nNEXUSLEARN", font=("Helvetica", 26, "bold"), bg="#0B132B", fg="#5BC0BE")
+        self.lbl_logo.pack(expand=True)
+        
+        self.lbl_pct = tk.Label(self.load_frame, text="System Booting: 01%", font=("Courier", 14), bg="#0B132B", fg="#FFFFFF")
+        self.lbl_pct.pack(pady=5)
+        
+        self.progress = ttk.Progressbar(self.load_frame, orient="horizontal", length=350, mode="determinate")
+        self.progress.pack(pady=15)
+        
+        self.lbl_credit = tk.Label(self.load_frame, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 11, "italic"), bg="#0B132B", fg="#6C757D")
+        self.lbl_credit.pack(side=tk.BOTTOM, pady=30)
+        
+        threading.Thread(target=self.simulate_fast_boot, daemon=True).start()
+
+    def simulate_fast_boot(self):
+        for i in range(1, 101):
+            time.sleep(0.02)
+            self.root.after(0, self.update_progress, i)
+        self.root.after(0, self.load_role_selection_gateway)
+
+    def update_progress(self, val):
+        self.progress['value'] = val
+        self.lbl_pct.config(text=f"System Booting: {val:02d}%")
+
+    def load_role_selection_gateway(self):
+        self.load_frame.destroy()
+        
+        self.gateway_frame = tk.Frame(self.root, bg="#0B132B")
+        self.gateway_frame.pack(expand=True)
+        
+        tk.Label(self.gateway_frame, text="Welcome to NexusLearn", font=("Helvetica", 22, "bold"), bg="#0B132B", fg="#FFFFFF").pack(pady=20)
+        tk.Label(self.gateway_frame, text="Select your entry mode portal:", font=("Helvetica", 12), bg="#0B132B", fg="#6C757D").pack(pady=5)
+        
+        btn_teacher = tk.Button(self.gateway_frame, text="[ I am a Teacher ]", command=self.load_teacher_login, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 12, "bold"), width=25, pady=10)
+        btn_teacher.pack(pady=10)
+        
+        btn_student = tk.Button(self.gateway_frame, text="[ I am a Student ]", command=self.load_student_login, bg="#1C2541", fg="#FFFFFF", font=("Helvetica", 12, "bold"), width=25, pady=10)
+        btn_student.pack(pady=10)
+
+    # =========================================================================
+    # TEACHER PIPELINE MODULES
+    # =========================================================================
+    def load_teacher_login(self):
+        self.gateway_frame.destroy()
+        
+        self.login_frame = tk.Frame(self.root, bg="#0B132B")
+        self.login_frame.pack(expand=True)
+        
+        tk.Label(self.login_frame, text="Educator Secure Gateway", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#5BC0BE").pack(pady=15)
+        
+        tk.Label(self.login_frame, text="Username / Email:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_t_user = tk.Entry(self.login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_t_user.pack(pady=5)
+        
+        tk.Label(self.login_frame, text="Password:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_t_pass = tk.Entry(self.login_frame, show="*", font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_t_pass.pack(pady=5)
+        
+        tk.Label(self.login_frame, text="Admin Authorization PIN:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_t_pin = tk.Entry(self.login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_t_pin.pack(pady=5)
+        
+        btn_auth = tk.Button(self.login_frame, text="Authenticate Credentials", command=self.verify_teacher_credentials, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"), width=25)
+        btn_auth.pack(pady=20)
+
+    def verify_teacher_credentials(self):
+        user = self.ent_t_user.get().strip()
+        pwd = self.ent_t_pass.get().strip()
+        pin = self.ent_t_pin.get().strip()
+        
+        self.cursor.execute("SELECT expiration_timestamp, payment_status FROM teachers WHERE username=? AND password=? AND auth_pin=?", (user, pwd, pin))
+        record = self.cursor.fetchone()
+        
+        if record:
+            expiry_str = record[0]
+            payment_status = record[1]
+            
+            # Enforce financial compliance guardrails
+            if payment_status == "Unpaid":
+                messagebox.showerror("Access Suspended", "This structural account layer has been flagged for non-payment parameters.")
+                return
+                
+            # Temporal expiry window comparisons
+            expiry_time = datetime.datetime.strptime(expiry_str, '%Y-%m-%d %H:%M:%S')
+            if datetime.datetime.now() > expiry_time:
+                messagebox.showerror("PIN Expired", "The security authorization token assigned has reached its programmatic lifespan wall.")
+                return
+                
+            self.login_frame.destroy()
+            self.run_teacher_10s_transition()
+        else:
+            messagebox.showerror("Access Denied", "Invalid administrative metrics. Verify authorization PIN structure.")
+
+    def run_teacher_10s_transition(self):
+        self.intro_frame = tk.Frame(self.root, bg="#0B132B")
+        self.intro_frame.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        tk.Label(self.intro_frame, text="▲\nNEXUSLEARN", font=("Helvetica", 32, "bold"), bg="#0B132B", fg="#5BC0BE").pack(expand=True)
+        tk.Label(self.intro_frame, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 12, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.BOTTOM, pady=40)
+        
+        threading.Thread(target=self.wait_for_teacher_dashboard, daemon=True).start()
+
+    def wait_for_teacher_dashboard(self):
+        time.sleep(10)
+        self.root.after(0, self.build_teacher_workspace)
+
+    def build_teacher_workspace(self):
+        if hasattr(self, 'intro_frame'): self.intro_frame.destroy()
+        
+        self.main_work = tk.Frame(self.root, bg="#0B132B")
+        self.main_work.pack(fill="both", expand=True)
+        
+        # Left Configuration Block
+        left_p = tk.Frame(self.main_work, bg="#1C2541", width=300)
+        left_p.pack(side=tk.LEFT, fill="y", padx=10, pady=10)
+        left_p.pack_propagate(False)
+        
+        tk.Label(left_p, text="Session Command Panel", font=("Helvetica", 12, "bold"), bg="#1C2541", fg="#5BC0BE").pack(pady=10)
+        
+        tk.Label(left_p, text="Class Assignment Name:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=10)
+        self.ent_cname = tk.Entry(left_p, font=("Helvetica", 11), bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_cname.pack(fill="x", padx=10, pady=5)
+        
+        btn_gen_pin = tk.Button(left_p, text="Generate Invitation Code", command=self.teacher_generate_pin, bg="#0B132B", fg="#5BC0BE")
+        btn_gen_pin.pack(pady=5)
+        
+        self.lbl_t_pin = tk.Label(left_p, text="CODE: ----", font=("Courier", 14, "bold"), bg="#1C2541", fg="#FFFFFF")
+        self.lbl_t_pin.pack(pady=5)
+        
+        btn_launch = tk.Button(left_p, text="Launch Classroom Live", command=self.teacher_launch_class, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
+        btn_launch.pack(pady=15, fill="x", padx=10)
+        
+        self.btn_t_break = tk.Button(left_p, text="Initiate Break Time (10m)", command=self.teacher_toggle_break, state=tk.DISABLED, bg="#6C757D", fg="#FFFFFF")
+        self.btn_t_break.pack(pady=5, fill="x", padx=10)
+        
+        btn_t_exam = tk.Button(left_p, text="Deploy Assessment Module", command=self.teacher_open_exam, bg="#1C2541", fg="#FFFFFF")
+        btn_t_exam.pack(pady=5, fill="x", padx=10)
+        
+        tk.Label(left_p, text="Talabi David Adeoluwa", font=("Helvetica", 8, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.BOTTOM, pady=5)
+
+        # Right Monitoring Window Roster Setup
+        right_p = tk.Frame(self.main_work, bg="#0B132B")
+        right_p.pack(side=tk.RIGHT, fill="both", expand=True, padx=10, pady=10)
+        
+        tk.Label(right_p, text="Live Classroom Connections Monitor", font=("Helvetica", 13, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", pady=5)
+        
+        self.t_roster = ttk.Treeview(right_p, columns=("name", "status"), show="headings")
+        self.t_roster.heading("name", text="Student Display Identifier")
+        self.t_roster.heading("status", text="Realtime Audio State")
+        self.t_roster.pack(fill="both", expand=True, pady=5)
+        
+        # Direct Message Interface Architecture
+        dm_box = tk.LabelFrame(right_p, text="Direct Assist Console (One-to-One Private Messaging Mode)", bg="#1C2541", fg="#5BC0BE")
+        dm_box.pack(fill="x", pady=5)
+        
+        self.ent_dm_target = tk.Entry(dm_box, width=15, bg="#0B132B", fg="#FFFFFF")
+        self.ent_dm_target.insert(0, "Target Student")
+        self.ent_dm_target.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        self.ent_dm_txt = tk.Entry(dm_box, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_dm_txt.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
+        
+        btn_dm_send = tk.Button(dm_box, text="Send Direct Text", command=self.teacher_send_dm, bg="#5BC0BE", fg="#0B132B")
+        btn_dm_send.pack(side=tk.RIGHT, padx=5, pady=5)
+
+    def teacher_generate_pin(self):
+        self.active_session_pin = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        self.lbl_t_pin.config(text=f"CODE: {self.active_session_pin}")
+
+    def teacher_launch_class(self):
+        self.current_class_name = self.ent_cname.get().strip()
+        if not self.current_class_name or not self.active_session_pin:
+            messagebox.showwarning("Warning", "Assign a Class Title and structural network code parameter first.")
+            return
+        
+        ans = messagebox.askyesno("Confirmation Prompt", f"Deploy network infrastructure paths for:\nClass: {self.current_class_name}\nCode: {self.active_session_pin}?")
+        if ans:
+            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
+                                (self.active_session_pin, f"SESSION_START:{self.current_class_name}"))
+            self.conn.commit()
+            self.btn_t_break.config(state=tk.NORMAL, bg="#E63946")
+            messagebox.showinfo("Live Ready", "Classroom environment initialization logs broadcasted successfully.")
+
+    def teacher_toggle_break(self):
+        if not self.is_break_active:
+            self.is_break_active = True
+            self.break_time_left = 600
+            self.btn_t_break.config(text="Extend Break Time (+2m)", bg="#FFB703")
+            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', 'STATE:BREAK_START')", (self.active_session_pin,))
+            self.conn.commit()
+            threading.Thread(target=self.teacher_break_clock_loop, daemon=True).start()
+        else:
+            self.break_time_left += 120
+
+    def teacher_break_clock_loop(self):
+        while self.break_time_left > 0 and self.is_break_active:
+            time.sleep(1)
+            self.break_time_left -= 1
+            if self.break_time_left in [120, 60]:
+                self.root.bell()
+        if self.break_time_left <= 0:
+            self.is_break_active = False
+            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', 'STATE:BREAK_END')", (self.active_session_pin,))
+            self.conn.commit()
+            self.root.after(0, lambda: self.btn_t_break.config(text="Initiate Break Time (10m)", bg="#E63946"))
+
+    def teacher_open_exam(self):
+        win = tk.Toplevel(self.root)
+        win.title("NexusLearn Assessment Center")
+        win.geometry("500x380")
+        win.configure(bg="#1C2541")
+        
+        tk.Label(win, text="CBT Testing Parameters Builder", font=("Helvetica", 11, "bold"), bg="#1C2541", fg="#5BC0BE").pack(pady=10)
+        
+        tk.Label(win, text="Question Prompt:", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
+        t_box = tk.Text(win, height=4, bg="#0B132B", fg="#FFFFFF")
+        t_box.pack(fill="x", padx=20, pady=5)
+        
+        tk.Label(win, text="Options Matrix Array (Split with | character):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
+        e_opts = tk.Entry(win, bg="#0B132B", fg="#FFFFFF")
+        e_opts.pack(fill="x", padx=20, pady=5)
+        
+        tk.Label(win, text="Testing Time Constraints (Minutes):", bg="#1C2541", fg="#FFFFFF").pack(anchor="w", padx=20)
+        e_time = tk.Entry(win, width=10, bg="#0B132B", fg="#FFFFFF")
+        e_time.insert(0, "45")
+        e_time.pack(anchor="w", padx=20, pady=5)
+        
+        def deploy():
+            q = t_box.get("1.0", tk.END).strip()
+            opts = e_opts.get().strip()
+            tm = e_time.get().strip()
+            if q and tm:
+                self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'SYSTEM', 'BROADCAST', ?)",
+                                    (self.active_session_pin, f"EXAM_LAUNCH:{tm}|{q}|{opts}"))
+                self.conn.commit()
+                messagebox.showinfo("Exam Deployed", "CBT configuration metrics synchronized across live instances.")
+                win.destroy()
+                
+        tk.Button(win, text="Publish Assessment Live", command=deploy, bg="#5BC0BE", fg="#0B132B").pack(pady=15)
+
+    def teacher_send_dm(self):
+        t = self.ent_dm_target.get().strip()
+        m = self.ent_dm_txt.get().strip()
+        if t and m and self.active_session_pin:
+            self.cursor.execute("INSERT INTO chat_logs (session_id, sender, recipient, message) VALUES (?, 'TEACHER', ?, ?)",
+                                (self.active_session_pin, t, m))
+            self.conn.commit()
+            self.ent_dm_txt.delete(0, tk.END)
+
+    # =========================================================================
+    # STUDENT PIPELINE MODULES
+    # =========================================================================
+    def load_student_login(self):
+        self.gateway_frame.destroy()
+        
+        self.s_login_frame = tk.Frame(self.root, bg="#0B132B")
+        self.s_login_frame.pack(expand=True)
+        
+        tk.Label(self.s_login_frame, text="Student Entry Gateway", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#5BC0BE").pack(pady=15)
+        
+        tk.Label(self.s_login_frame, text="Your Screen Profile Name:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_s_name = tk.Entry(self.s_login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_s_name.pack(pady=5)
+        
+        tk.Label(self.s_login_frame, text="Active Classroom Code:", bg="#0B132B", fg="#FFFFFF").pack(anchor="w")
+        self.ent_s_code = tk.Entry(self.s_login_frame, font=("Helvetica", 12), width=30, bg="#1C2541", fg="#FFFFFF", insertbackground="white")
+        self.ent_s_code.pack(pady=5)
+        
+        btn_connect = tk.Button(self.s_login_frame, text="Establish Connection Roster", command=self.verify_student_entry, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 11, "bold"))
+        btn_connect.pack(pady=20)
+
+    def verify_student_entry(self):
+        name = self.ent_s_name.get().strip()
+        code = self.ent_s_code.get().strip()
+        
+        if not name or not code:
+            messagebox.showwarning("Error", "All active dynamic mapping vectors must be defined explicitly.")
+            return
+            
+        self.cursor.execute("SELECT 1 FROM chat_logs WHERE session_id=? AND message LIKE 'SESSION_START:%'", (code,))
+        if self.cursor.fetchone():
+            self.student_name = name
+            self.active_session_pin = code
+            self.s_login_frame.destroy()
+            self.build_student_workspace()
+        else:
+            messagebox.showerror("Failed Connection", "Targeted classroom network node signature unrecognized.")
+
+    def build_student_workspace(self):
+        self.s_work = tk.Frame(self.root, bg="#0B132B")
+        self.s_work.pack(fill="both", expand=True)
+        
+        self.s_stage = tk.Frame(self.s_work, bg="#1C2541", height=420)
+        self.s_stage.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.lbl_s_view = tk.Label(self.s_stage, text="▲ Audio & Video Feed Sync Active\n[Awaiting Instructional Materials]", font=("Helvetica", 13), bg="#1C2541", fg="#FFFFFF")
+        self.lbl_s_view.pack(expand=True)
+        
+        s_dock = tk.Frame(self.s_work, bg="#0B132B", height=70)
+        s_dock.pack(fill="x", side=tk.BOTTOM, padx=10, pady=5)
+        
+        btn_raise = tk.Button(s_dock, text="🖐️ Raise Hand", command=lambda: self.dispatch_student_emote("🖐️"), bg="#1C2541", fg="#FFFFFF")
+        btn_raise.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        btn_clap = tk.Button(s_dock, text="👏 Send Clap", command=lambda: self.dispatch_student_emote("👏"), bg="#1C2541", fg="#FFFFFF")
+        btn_clap.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        tk.Label(s_dock, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.RIGHT, padx=10)
+
+        threading.Thread(target=self.student_sync_thread, daemon=True).start()
+
+    def dispatch_student_emote(self, emote):
+        lbl = tk.Label(self.s_stage, text=emote, font=("Helvetica", 36), bg="#1C2541", fg="#5BC0BE")
+        lbl.place(relx=0.8, rely=0.7)
+        self.root.after(2000, lbl.destroy)
+
+    def student_sync_thread(self):
+        last_seen_id = 0
+        while True:
+            time.sleep(1.5)
+            self.cursor.execute("SELECT id, sender, recipient, message FROM chat_logs WHERE id > ? AND session_id=?", (last_seen_id, self.active_session_pin))
+            entries = self.cursor.fetchall()
+            
+            for eid, sender, recipient, msg in entries:
+                last_seen_id = eid
+                if recipient == "BROADCAST":
+                    if msg == "STATE:BREAK_START":
+                        self.root.after(0, self.student_render_break)
+                    elif msg == "STATE:BREAK_END":
+                        self.root.after(0, self.student_clear_break)
+                    elif msg.startswith("EXAM_LAUNCH:"):
+                        payload = msg.split(":", 1)[1]
+                        self.root.after(0, self.student_force_cbt, payload)
+                elif recipient == self.student_name and sender == "TEACHER":
+                    self.root.after(0, lambda m=msg: messagebox.showinfo("Private Prompt from Teacher", m))
+
+    def student_render_break(self):
+        self.s_break_overlay = tk.Frame(self.root, bg="#0B132B")
+        self.s_break_overlay.place(x=0, y=0, relwidth=1, relheight=1)
+        tk.Label(self.s_break_overlay, text="Class is on a Short Break\n\nCamera System & Microphones Muted For Privacy", font=("Helvetica", 18, "bold"), bg="#0B132B", fg="#FFB703").pack(expand=True)
+
+    def student_clear_break(self):
+        if hasattr(self, 's_break_overlay'):
+            self.s_break_overlay.destroy()
+
+    def student_force_cbt(self, dataset):
+        parts = dataset.split("|")
+        duration = parts[0]
+        quest = parts[1]
+        options = parts[2] if len(parts) > 2 else "A|B|C|D"
+        
+        self.s_work.pack_forget()
+        
+        self.cbt_frame = tk.Frame(self.root, bg="#0B132B")
+        self.cbt_frame.pack(fill="both", expand=True)
+        
+        tk.Label(self.cbt_frame, text=f"Time Remaining: {duration}:00", font=("Courier", 14, "bold"), bg="#0B132B", fg="#E63946").pack(pady=10)
+        tk.Label(self.cbt_frame, text="EXAM APP ENVIRONMENT LOCK", font=("Helvetica", 10, "bold"), bg="#0B132B", fg="#5BC0BE").pack()
+        
+        lbl_q = tk.Label(self.cbt_frame, text=quest, font=("Helvetica", 14), bg="#1C2541", fg="#FFFFFF", pading=25, relief=tk.SOLID, wraplength=750)
+        lbl_q.pack(fill="x", padx=50, pady=25)
+        
+        btn_pane = tk.Frame(self.cbt_frame, bg="#0B132B")
+        btn_pane.pack(pady=10)
+        
+        for opt in options.split("|"):
+            tk.Button(btn_pane, text=opt.strip(), font=("Helvetica", 11), bg="#1C2541", fg="#FFFFFF", width=35, command=self.student_submit_cbt).pack(pady=5)
+
+    def student_submit_cbt(self):
+        messagebox.showinfo("Success", "Assessment responses transmitted successfully.")
+        self.cbt_frame.destroy()
+        self.s_work.pack(fill="both", expand=True)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = NexusLearnUnifiedApp(root)
+    root.mainloop()
+	◦	

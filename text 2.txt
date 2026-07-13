@@ -1,0 +1,184 @@
+import tkinter as tk
+from tkinter import messagebox, ttk
+import sqlite3
+import random
+import string
+import datetime
+
+class NexusLearnAdminConsole:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("NexusLearn // Master Administrative Intelligence")
+        self.root.geometry("1100x650")
+        self.root.configure(bg="#0B132B")
+        
+        # Initialize database connectivity and upgrade tables
+        self.init_admin_database()
+        
+        # Style Configs
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+        self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
+        self.style.map("Treeview", background=[('selected', '#5BC0BE')])
+        
+        self.build_layout()
+        self.refresh_all_monitors()
+
+    def init_admin_database(self):
+        self.conn = sqlite3.connect("nexuslearn_system.db")
+        self.cursor = self.conn.cursor()
+        
+        # Upgrade teacher table schema to support expiration limits and financial status logs
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teachers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                auth_pin TEXT UNIQUE NOT NULL,
+                payment_status TEXT DEFAULT 'Unpaid',
+                expiration_timestamp DATETIME
+            )
+        """)
+        
+        # Table to track system login audits explicitly
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS login_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                role TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self.conn.commit()
+
+    def generate_unique_secure_pin(self):
+        while True:
+            pin = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            self.cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
+            if not self.cursor.fetchone():
+                return pin
+
+    def register_and_expire_pin(self):
+        username = self.ent_user.get().strip()
+        password = self.ent_pass.get().strip()
+        payment = self.combo_payment.get()
+        hours_valid = self.ent_expiry.get().strip()
+        
+        if not username or not password or not hours_valid:
+            messagebox.showerror("Error", "All parameter windows must be completely assigned.")
+            return
+            
+        try:
+            hours = int(hours_valid)
+        except ValueError:
+            messagebox.showerror("Error", "Expiry duration value must be an integer (Hours).")
+            return
+            
+        auth_pin = self.generate_unique_secure_pin()
+        
+        # Calculate expiration time block matching current system clock
+        expiration_time = datetime.datetime.now() + datetime.timedelta(hours=hours)
+        expiration_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S')
+        
+        try:
+            self.cursor.execute(
+                "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
+                (username, password, auth_pin, payment, expiration_str)
+            )
+            self.conn.commit()
+            messagebox.showinfo("PIN Live", f"Authorization Node Written!\n\nGenerated PIN: {auth_pin}\nExpires: {expiration_str}")
+            self.ent_user.delete(0, tk.END)
+            self.ent_pass.delete(0, tk.END)
+            self.refresh_all_monitors()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Registry Collision", "Target account identifier already exists inside network arrays.")
+
+    def refresh_all_monitors(self):
+        # 1. Refresh Accounts / Payment Tree
+        for item in self.tree_accounts.get_children():
+            self.tree_accounts.delete(item)
+        self.cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
+        for row in self.cursor.fetchall():
+            self.tree_accounts.insert("", tk.END, values=row)
+            
+        # 2. Refresh Live Active Sessions Monitor
+        for item in self.tree_live.get_children():
+            self.tree_live.delete(item)
+        self.cursor.execute("SELECT DISTINCT session_id, message, timestamp FROM chat_logs WHERE message LIKE 'SESSION_START:%'")
+        for row in self.cursor.fetchall():
+            class_title = row[1].split(":", 1)[1]
+            self.tree_live.insert("", tk.END, values=(row[0], class_title, row[2]))
+
+    def build_layout(self):
+        # Master Control Header Frame
+        header = tk.Frame(self.root, bg="#1C2541", height=60)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        
+        tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT COMMAND HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
+        tk.Label(header, text="Producer Access Layer", font=("Helvetica", 10, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.RIGHT, padx=20)
+
+        # Main Workspace Notebook Grid
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # --- TAB 1: USER REGISTRATION & FINANCIAL TRACKING ---
+        tab1 = tk.Frame(notebook, bg="#0B132B")
+        notebook.add(tab1, text=" Credentials & Account Ledgers ")
+        
+        form_p = tk.LabelFrame(tab1, text=" Authorize New Teacher Profile ", bg="#1C2541", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
+        form_p.pack(fill="x", padx=10, pady=10)
+        
+        tk.Label(form_p, text="Account ID:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.ent_user = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_user.grid(row=0, column=1, padx=5, pady=5)
+        
+        tk.Label(form_p, text="System Key:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.ent_pass = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_pass.grid(row=0, column=3, padx=5, pady=5)
+        
+        tk.Label(form_p, text="Payment Status:", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.combo_payment = ttk.Combobox(form_p, values=["Paid", "Unpaid"], state="readonly", width=12)
+        self.combo_payment.current(1)
+        self.combo_payment.grid(row=1, column=1, padx=5, pady=5)
+        
+        tk.Label(form_p, text="Lifespan (Hours):", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        self.ent_expiry = tk.Entry(form_p, width=10, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_expiry.insert(0, "720") # Defaults to 30 days validation metrics
+        self.ent_expiry.grid(row=1, column=3, padx=5, pady=5)
+        
+        btn_commit = tk.Button(form_p, text="Commit & Generate PIN", command=self.register_and_expire_pin, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
+        btn_commit.grid(row=0, column=4, rowspan=2, padx=20, pady=5)
+        
+        # Accounts Table View
+        self.tree_accounts = ttk.Treeview(tab1, columns=("u", "p", "f", "e"), show="headings")
+        self.tree_accounts.heading("u", text="Educator Identity Handle")
+        self.tree_accounts.heading("p", text="Permanent System PIN")
+        self.tree_accounts.heading("f", text="Financial Log State")
+        self.tree_accounts.heading("e", text="Expiration Deadline Bounds")
+        self.tree_accounts.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # --- TAB 2: AUDITS & REALTIME NETWORK OPERATION MONITOR ---
+        tab2 = tk.Frame(notebook, bg="#0B132B")
+        notebook.add(tab2, text=" Live Operations Stream ")
+        
+        tk.Label(tab2, text="Active Network Sessions Log", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", padx=10, pady=5)
+        
+        self.tree_live = ttk.Treeview(tab2, columns=("sid", "title", "t"), show="headings")
+        self.tree_live.heading("sid", text="Dynamic Session Code")
+        self.tree_live.heading("title", text="Classroom Assigned Name")
+        self.tree_live.heading("t", text="Network Spinup Timestamp")
+        self.tree_live.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        btn_refresh = tk.Button(tab2, text="Force Global Data Re-Index", command=self.refresh_all_monitors, bg="#1C2541", fg="#5BC0BE")
+        btn_refresh.pack(pady=5)
+
+        # Persistent Founder Watermark Footer Section
+        footer = tk.Frame(self.root, bg="#0B132B")
+        footer.pack(fill="x", side=tk.BOTTOM, pady=5)
+        tk.Label(footer, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.LEFT, padx=15)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = NexusLearnAdminConsole(root)
+    root.mainloop()
