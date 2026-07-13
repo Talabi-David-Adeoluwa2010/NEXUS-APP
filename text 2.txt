@@ -1,9 +1,95 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
-import sqlite3
+import datetime
 import random
 import string
-import datetime
+import sqlite3
+import threading
+import json
+import tkinter as tk
+from tkinter import messagebox, ttk
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+# Initialize Flask App for Web Connectivity
+server = Flask(__name__)
+CORS(server) # Allows your GitHub page to connect securely
+
+DB_FILE = "nexuslearn_system.db"
+
+# =====================================================================
+# BACKGROUND FLASK SERVER ENGINE (Receives data from your website)
+# =====================================================================
+
+@server.route('/api/client/heartbeat', methods=['POST'])
+def handle_web_heartbeat():
+    """Receives live updates from teachers and students on your website."""
+    data = request.json or {}
+    username = data.get("username", "Unknown User")
+    role = data.get("role", "Student")
+    action = data.get("action", "Idling")
+    session_id = data.get("session_id", "GLOBAL_NODE")
+
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        # Ensure chat_logs table exists to catch web activity
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT,
+                message TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Log the live action so the Tkinter dashboard can read it
+        log_msg = f"SESSION_START:{role} | {username} is currently {action}"
+        cursor.execute(
+            "INSERT INTO chat_logs (session_id, message, timestamp) VALUES (?, ?, ?)",
+            (session_id, log_msg, now_str)
+        )
+        conn.commit()
+        
+    return jsonify({"status": "Core synchronized", "timestamp": now_str})
+
+
+@server.route('/api/client/verify-pin', methods=['POST'])
+def verify_teacher_pin():
+    """Validates if a teacher's token is paid and hasn't expired yet."""
+    data = request.json or {}
+    pin = data.get("pin", "").strip()
+    
+    now = datetime.datetime.now()
+    
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM teachers WHERE auth_pin = ?", (pin,))
+        teacher = cursor.fetchone()
+        
+        if not teacher:
+            return jsonify({"status": "REJECTED", "message": "Invalid credentials code."}), 401
+            
+        if teacher['payment_status'] != 'Paid':
+            return jsonify({"status": "REJECTED", "message": "Subscription inactive. Payment required."}), 403
+            
+        expiry = datetime.datetime.strptime(teacher['expiration_timestamp'], '%Y-%m-%d %H:%M:%S')
+        if now > expiry:
+            return jsonify({"status": "REJECTED", "message": "Token lifespan has expired."}), 403
+            
+        return jsonify({
+            "status": "GRANTED",
+            "username": teacher['username'],
+            "expires_at": teacher['expiration_timestamp']
+        })
+
+def start_server():
+    # Runs the network channel on port 5000 in the background
+    server.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
+
+
+# =====================================================================
+# UPGRADED TKINTER MASTER ADMINISTRATIVE INTEL DESKTOP CONSOLE
+# =====================================================================
 
 class NexusLearnAdminConsole:
     def __init__(self, root):
@@ -12,10 +98,8 @@ class NexusLearnAdminConsole:
         self.root.geometry("1100x650")
         self.root.configure(bg="#0B132B")
         
-        # Initialize database connectivity and upgrade tables
         self.init_admin_database()
         
-        # Style Configs
         self.style = ttk.Style()
         self.style.theme_use("clam")
         self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
@@ -23,12 +107,12 @@ class NexusLearnAdminConsole:
         
         self.build_layout()
         self.refresh_all_monitors()
+        self.auto_refresh_loop() # Live data polling thread
 
     def init_admin_database(self):
-        self.conn = sqlite3.connect("nexuslearn_system.db")
+        self.conn = sqlite3.connect(DB_FILE)
         self.cursor = self.conn.cursor()
         
-        # Upgrade teacher table schema to support expiration limits and financial status logs
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS teachers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,13 +123,11 @@ class NexusLearnAdminConsole:
                 expiration_timestamp DATETIME
             )
         """)
-        
-        # Table to track system login audits explicitly
         self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS login_history (
+            CREATE TABLE IF NOT EXISTS chat_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT,
-                role TEXT,
+                session_id TEXT,
+                message TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -53,7 +135,11 @@ class NexusLearnAdminConsole:
 
     def generate_unique_secure_pin(self):
         while True:
-            pin = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            # Matches your 4 numbers + 2 letters request architecture
+            digits = "".join(random.choices(string.digits, k=4))
+            letters = "".join(random.choices(string.ascii_uppercase, k=2))
+            pin = digits + letters
+            
             self.cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
             if not self.cursor.fetchone():
                 return pin
@@ -75,8 +161,6 @@ class NexusLearnAdminConsole:
             return
             
         auth_pin = self.generate_unique_secure_pin()
-        
-        # Calculate expiration time block matching current system clock
         expiration_time = datetime.datetime.now() + datetime.timedelta(hours=hours)
         expiration_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S')
         
@@ -94,23 +178,29 @@ class NexusLearnAdminConsole:
             messagebox.showerror("Registry Collision", "Target account identifier already exists inside network arrays.")
 
     def refresh_all_monitors(self):
-        # 1. Refresh Accounts / Payment Tree
+        # 1. Refresh Accounts
         for item in self.tree_accounts.get_children():
             self.tree_accounts.delete(item)
         self.cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
         for row in self.cursor.fetchall():
             self.tree_accounts.insert("", tk.END, values=row)
             
-        # 2. Refresh Live Active Sessions Monitor
+        # 2. Refresh Live Monitor Stream
         for item in self.tree_live.get_children():
             self.tree_live.delete(item)
-        self.cursor.execute("SELECT DISTINCT session_id, message, timestamp FROM chat_logs WHERE message LIKE 'SESSION_START:%'")
+        self.cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
         for row in self.cursor.fetchall():
-            class_title = row[1].split(":", 1)[1]
-            self.tree_live.insert("", tk.END, values=(row[0], class_title, row[2]))
+            self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
+
+    def auto_refresh_loop(self):
+        """Automatically updates tracking readouts every 3 seconds without freezing windows."""
+        try:
+            self.refresh_all_monitors()
+        except Exception:
+            pass
+        self.root.after(3000, self.auto_refresh_loop)
 
     def build_layout(self):
-        # Master Control Header Frame
         header = tk.Frame(self.root, bg="#1C2541", height=60)
         header.pack(fill="x")
         header.pack_propagate(False)
@@ -118,11 +208,9 @@ class NexusLearnAdminConsole:
         tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT COMMAND HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
         tk.Label(header, text="Producer Access Layer", font=("Helvetica", 10, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.RIGHT, padx=20)
 
-        # Main Workspace Notebook Grid
         notebook = ttk.Notebook(self.root)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # --- TAB 1: USER REGISTRATION & FINANCIAL TRACKING ---
         tab1 = tk.Frame(notebook, bg="#0B132B")
         notebook.add(tab1, text=" Credentials & Account Ledgers ")
         
@@ -144,13 +232,12 @@ class NexusLearnAdminConsole:
         
         tk.Label(form_p, text="Lifespan (Hours):", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=2, padx=5, pady=5, sticky="w")
         self.ent_expiry = tk.Entry(form_p, width=10, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
-        self.ent_expiry.insert(0, "720") # Defaults to 30 days validation metrics
+        self.ent_expiry.insert(0, "720") 
         self.ent_expiry.grid(row=1, column=3, padx=5, pady=5)
         
         btn_commit = tk.Button(form_p, text="Commit & Generate PIN", command=self.register_and_expire_pin, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
         btn_commit.grid(row=0, column=4, rowspan=2, padx=20, pady=5)
         
-        # Accounts Table View
         self.tree_accounts = ttk.Treeview(tab1, columns=("u", "p", "f", "e"), show="headings")
         self.tree_accounts.heading("u", text="Educator Identity Handle")
         self.tree_accounts.heading("p", text="Permanent System PIN")
@@ -158,27 +245,29 @@ class NexusLearnAdminConsole:
         self.tree_accounts.heading("e", text="Expiration Deadline Bounds")
         self.tree_accounts.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # --- TAB 2: AUDITS & REALTIME NETWORK OPERATION MONITOR ---
         tab2 = tk.Frame(notebook, bg="#0B132B")
         notebook.add(tab2, text=" Live Operations Stream ")
         
-        tk.Label(tab2, text="Active Network Sessions Log", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", padx=10, pady=5)
+        tk.Label(tab2, text="Real-Time Network Activity Feed", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", padx=10, pady=5)
         
         self.tree_live = ttk.Treeview(tab2, columns=("sid", "title", "t"), show="headings")
-        self.tree_live.heading("sid", text="Dynamic Session Code")
-        self.tree_live.heading("title", text="Classroom Assigned Name")
-        self.tree_live.heading("t", text="Network Spinup Timestamp")
+        self.tree_live.heading("sid", text="Session Identifier")
+        self.tree_live.heading("title", text="Live User Activity Description")
+        self.tree_live.heading("t", text="Log Event Timestamp")
         self.tree_live.pack(fill="both", expand=True, padx=10, pady=10)
         
         btn_refresh = tk.Button(tab2, text="Force Global Data Re-Index", command=self.refresh_all_monitors, bg="#1C2541", fg="#5BC0BE")
         btn_refresh.pack(pady=5)
 
-        # Persistent Founder Watermark Footer Section
         footer = tk.Frame(self.root, bg="#0B132B")
         footer.pack(fill="x", side=tk.BOTTOM, pady=5)
         tk.Label(footer, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.LEFT, padx=15)
 
 if __name__ == "__main__":
+    # Spin up the Flask Server API in a separate back thread
+    threading.Thread(target=start_server, daemon=True).start()
+    
+    # Run the Desktop UI
     root = tk.Tk()
     app = NexusLearnAdminConsole(root)
     root.mainloop()
