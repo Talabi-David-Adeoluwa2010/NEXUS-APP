@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexusLearn // Synchronizing...</title>
     <style>
-        /* Base Styles for Resizability */
+        /* Base Styles for Universal Resizability */
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden; /* Prevent scrolling during load */
-            background-color: #050811; /* Matches Admin Dashboard */
+            overflow-x: hidden;
+            background-color: #050811;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #FFFFFF;
             display: flex;
@@ -20,118 +20,159 @@
             align-items: center;
         }
 
-        /* Container designed to scale */
+        /* Fully responsive and flexible container */
         .loading-container {
             text-align: center;
             width: 90%;
-            max-width: 500px; /* Limits width on large screens */
-            padding: 20px;
+            max-width: 480px;
+            padding: 40px 20px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             align-items: center;
-            z-index: 10;
+            justify-content: center;
+            min-height: 100vh;
         }
 
-        /* Generated Logo Placeholder */
-        .logo-placeholder {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728);
-            border-radius: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 40px;
-            font-weight: bold;
-            color: #050811;
-            margin-bottom: 10px;
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+        /* Recreated High-Fidelity SVG Logo Container */
+        .logo-container {
+            width: 140px;
+            height: 140px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 15px rgba(100, 149, 237, 0.3));
         }
 
         h1.app-name {
-            color: #D4AF37;
-            font-size: 2.5rem; /* Scales with screen size */
+            color: #A5C4F2;
+            font-size: 2.2rem;
             margin: 0 0 5px 0;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             text-transform: uppercase;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(165, 196, 242, 0.2);
         }
 
-        /* Loading Bar Styles */
+        /* Progress Bar Dynamics */
         .progress-box {
             width: 100%;
-            margin: 30px 0;
+            margin: 25px 0;
         }
 
         .progress-bar {
             width: 100%;
-            height: 10px;
-            background-color: #1F2937;
-            border-radius: 5px;
+            height: 8px;
+            background-color: #0F1626;
+            border-radius: 10px;
             overflow: hidden;
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            border: 1px solid rgba(165, 196, 242, 0.15);
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #BF953F, #FCF6BA, #D4AF37);
-            width: 0%; /* Initial state */
-            transition: width 0.05s linear; /* Smooth animation */
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            background: linear-gradient(90deg, #507DBC, #A5C4F2, #E2EBFA);
+            width: 0%;
+            transition: width 0.05s linear;
+            box-shadow: 0 0 8px rgba(165, 196, 242, 0.4);
         }
 
         .percentage {
-            color: #D4AF37;
+            color: #A5C4F2;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             margin-top: 10px;
             font-weight: bold;
+            letter-spacing: 1px;
         }
 
-        /* About Section */
+        /* About Panel */
         .about-section {
             background-color: #0F1626;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid rgba(212, 175, 55, 0.1);
+            border-radius: 14px;
+            padding: 22px;
+            border: 1px solid rgba(165, 196, 242, 0.1);
             width: 100%;
             box-sizing: border-box;
             text-align: left;
+            margin-bottom: 40px;
         }
 
         .about-section h2 {
-            color: #D4AF37;
-            font-size: 1.2rem;
+            color: #A5C4F2;
+            font-size: 1.1rem;
             margin-top: 0;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .about-section p {
             color: #9CA3AF;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             line-height: 1.6;
             margin: 0;
         }
 
-        /* Fixed Founder Footer (Bottom Left) */
+        /* Positioned Left Bottom Creator Attribution */
         .fixed-founder {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            font-size: 0.8rem;
-            color: #6C757D;
-            z-index: 5;
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            font-size: 0.75rem;
+            color: #4B5563;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            line-height: 1.4;
+            text-align: left;
         }
 
         .fixed-founder strong {
             color: #9CA3AF;
+            display: block;
+            font-size: 0.8rem;
+            margin-top: 2px;
+        }
+
+        /* Mobile specific optimizations */
+        @media (max-width: 480px) {
+            h1.app-name { font-size: 1.8rem; }
+            .about-section p { font-size: 0.85rem; }
+            .fixed-founder {
+                position: relative;
+                bottom: 10px;
+                left: 0;
+                text-align: center;
+                margin-top: 10px;
+                width: 100%;
+            }
+            .fixed-founder strong { display: inline-block; margin-left: 4px; }
         }
     </style>
 </head>
 <body>
 
     <div class="loading-container">
-        <div class="logo-placeholder">N</div>
+        <div class="logo-container">
+            <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <defs>
+                    <linearGradient id="metalBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#4E78A6" />
+                        <stop offset="50%" stop-color="#A2C3ED" />
+                        <stop offset="100%" stop-color="#2D4D73" />
+                    </linearGradient>
+                </defs>
+                
+                <path d="M30 35 L45 25 L60 35 L60 50 L45 40 Z" fill="none" stroke="url(#metalBlue)" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M45 45 L60 35 L75 45 L75 60 L60 70 L45 60 Z" fill="none" stroke="url(#metalBlue)" stroke-width="3.5" stroke-linejoin="round"/>
+                <path d="M25 55 L40 45 L55 55 L55 70 L40 80 L25 70 Z" fill="none" stroke="url(#metalBlue)" stroke-width="3.5" stroke-linejoin="round"/>
+                
+                <path d="M44 54 C46 51, 48 51, 50 53 C52 51, 54 51, 56 54 L56 61 C54 58, 52 58, 50 60 C48 58, 46 58, 44 61 Z" fill="none" stroke="url(#metalBlue)" stroke-width="1.8"/>
+                <line x1="50" y1="53" x2="50" y2="60" stroke="url(#metalBlue)" stroke-width="1.5" />
+
+                <path d="M35 75 L48 58 L55 64 L72 34" fill="none" stroke="url(#metalBlue)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M63 34 L72 34 L72 43" fill="none" stroke="url(#metalBlue)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
         <h1 class="app-name">NexusLearn</h1>
 
         <div class="progress-box">
@@ -142,41 +183,33 @@
         </div>
 
         <div class="about-section">
-            <h2>About the App</h2>
-            <p>Connecting minds globally. NexusLearn is the premium transmission hub empowering teachers and students with real-time, global video communication for seamless learning experiences across borders.</p>
+            <h2>About NexusLearn</h2>
+            <p>Connecting minds globally. Empowering teachers and students through real-time video communication for seamless learning experiences across borders.</p>
         </div>
     </div>
 
     <div class="fixed-founder">
-        produced / founded by <strong>Talabi David Adeoluwa</strong>
+        PRODUCED / FOUNDED BY 
+        <strong>TALABI DAVID ADEOLUWA</strong>
     </div>
 
     <script>
-        // Simulation logic for 1-100 load
         let progress = 0;
         const fill = document.getElementById('progressFill');
         const text = document.getElementById('percentageText');
 
-        // Update function
         function updateLoading() {
             progress += 1;
-            
-            // Update visual elements
             fill.style.width = progress + '%';
             text.innerText = progress + '%';
 
-            // Stop at 100 or continue
             if (progress < 100) {
-                // Adjust speed here (lower number = faster)
                 setTimeout(updateLoading, 30); 
             } else {
                 text.innerText = "COMPLETE // SYNCHRONIZED";
-                // Optional: Redirect to the main app after a delay
-                // setTimeout(() => { window.location.href = 'main_app.html'; }, 1000);
             }
         }
 
-        // Start the simulation immediately
         updateLoading();
     </script>
 </body>
