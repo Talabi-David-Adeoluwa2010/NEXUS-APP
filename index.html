@@ -17,8 +17,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Allow vertical scrolling on the page level if the inner elements exceed screen height */
-            overflow-y: auto; 
+            overflow-y: auto; /* Force vertical scroll support on body */
         }
 
         /* ==========================================
@@ -146,7 +145,7 @@
         }
 
         /* ==========================================
-           STAGE 2: SIGN-IN PORTAL STYLES (DYNAMIC SCROLL FIX)
+           STAGE 2: SIGN-IN PORTAL STYLES (DYNAMIC SCROLL SUPPORT)
            ========================================== */
         #signInPortal {
             display: none; /* Controlled via JS */
@@ -154,7 +153,7 @@
             visibility: hidden;
             width: 90%;
             max-width: 950px;
-            margin: 40px auto; /* Allows breathing room when scrolling */
+            margin: 40px auto; /* Provides room to slide and scroll */
             height: auto;
             min-height: 550px;
             background-color: #0F1626;
@@ -329,10 +328,9 @@
             display: none;
         }
 
-        /* Responsive Breakpoint - Switches to a single scrollable vertical layout on smaller screens */
         @media (max-width: 768px) {
             html, body {
-                align-items: flex-start; /* Prevents center clipping on small screens */
+                align-items: flex-start;
             }
             #signInPortal {
                 flex-direction: column;
@@ -359,7 +357,7 @@
     <div id="loadingScreen">
         <div class="loading-container">
             <div class="logo-container">
-                <img src="static/IMG_5615.jpeg" onerror="this.src='/static/IMG_5615.jpeg'" alt="NexusLearn Logo" class="logo-image">
+                <img src="{{ url_for('static', filename='IMG_5615.jpeg') }}" onerror="this.src='static/IMG_5615.jpeg'" alt="NexusLearn Logo" class="logo-image">
             </div>
 
             <h1 class="app-name">NexusLearn</h1>
@@ -379,7 +377,7 @@
     <div id="signInPortal">
         <div class="info-side">
             <div class="logo-box">
-                <img src="static/IMG_5615.jpeg" onerror="this.src='/static/IMG_5615.jpeg'" alt="NexusLearn Logo">
+                <img src="{{ url_for('static', filename='IMG_5615.jpeg') }}" onerror="this.src='static/IMG_5615.jpeg'" alt="NexusLearn Logo">
             </div>
             <div class="about-text-wrapper">
                 <h2>NexusLearn Portal</h2>
@@ -435,7 +433,6 @@
     </div>
 
     <script>
-        // 1. Progress Bar Synchronization Loop
         let progress = 0;
         const fill = document.getElementById('progressFill');
         const text = document.getElementById('percentageText');
@@ -449,21 +446,18 @@
             text.innerText = progress + '%';
             
             if (progress < 100) {
-                setTimeout(updateLoading, 30);
+                setTimeout(updateLoading, 25);
             } else {
                 text.innerText = "COMPLETE // SYNCHRONIZED";
-                setTimeout(transitionToPortal, 800);
+                setTimeout(transitionToPortal, 600);
             }
         }
 
-        // 2. Hide Loading & Reveal Sign-in Portal
         function transitionToPortal() {
-            // Hide loading elements smoothly
             loadingScreen.style.opacity = '0';
             loadingScreen.style.visibility = 'hidden';
-            mobileFounderTag.style.display = 'none'; // Prevent duplicating founder text
+            mobileFounderTag.style.display = 'none';
 
-            // Reveal the login system
             signInPortal.style.display = 'flex';
             setTimeout(() => {
                 signInPortal.style.opacity = '1';
@@ -471,7 +465,6 @@
             }, 50);
         }
 
-        // 3. Student/Teacher form toggle
         function switchRole(role) {
             document.getElementById('studentTab').classList.remove('active');
             document.getElementById('teacherTab').classList.remove('active');
@@ -487,11 +480,9 @@
             }
         }
 
-        // 4. Capture server response errors and stay on Portal screen
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('error')) {
-                // If we hit an authentication error, skip loading directly to form side
                 loadingScreen.style.display = 'none';
                 mobileFounderTag.style.display = 'none';
                 signInPortal.style.display = 'flex';
@@ -502,12 +493,10 @@
                 errDiv.innerText = urlParams.get('error');
                 errDiv.style.display = 'block';
 
-                // Keep role form active based on what credentials failed
                 if (urlParams.get('role') === 'teacher') {
                     switchRole('teacher');
                 }
             } else {
-                // Otherwise start loading bar sequence immediately
                 updateLoading();
             }
         }
