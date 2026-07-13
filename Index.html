@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusLearn // Unified Learning Environment</title>
+    <style>
+        body {
+            background-color: #0B132B;
+            color: #FFFFFF;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .gateway-card {
+            background-color: #1C2541;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #5BC0BE;
+            font-size: 36px;
+            margin: 0 0 10px 0;
+        }
+        h2 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        p {
+            color: #6C757D;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 12px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-teacher {
+            background-color: #5BC0BE;
+            color: #0B132B;
+        }
+        .btn-teacher:hover {
+            background-color: #46a2a0;
+        }
+        .btn-student {
+            background-color: #1C2541;
+            color: #FFFFFF;
+            border: 2px solid #5BC0BE;
+        }
+        .btn-student:hover {
+            background-color: #253359;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 11px;
+            color: #6C757D;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="gateway-card">
+        <h1>▲</h1>
+        <h2>Welcome to NexusLearn</h2>
+        <p>Select your entry mode portal:</p>
+        
+        <button class="btn btn-teacher" onclick="alert('Connecting to Teacher Portal...')">[ I am a Teacher ]</button>
+        <button class="btn btn-student" onclick="alert('Connecting to Student Portal...')">[ I am a Student ]</button>
+        
+        <div class="footer">Produced / Founded by Talabi David Adeoluwa</div>
+    </div>
+
+</body>
+</html>
