@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request, render_template, send_from_directory,
 from flask_cors import CORS
 import os
 
-# Initialize Flask App with static reference configurations
+# Initialize Flask with absolute template and static bindings
 server = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(server)
 server.secret_key = "nexuslearn_secret_key_for_session"
@@ -22,12 +22,12 @@ def get_db_connection():
     return conn
 
 # =====================================================================
-# FLASK INTERFACE ROUTING
+# FLASK WEB INTERFACE ROUTING
 # =====================================================================
 
 @server.route('/', methods=['GET'])
 def serve_main_hub():
-    """Serves the integrated single-page loading & sign-in template."""
+    """Serves the integrated template which starts on the 30-second loader."""
     return render_template('index.html')
 
 @server.route('/signin', methods=['POST'])
@@ -114,7 +114,7 @@ def teacher_home():
     <body>
         <div class="card">
             <h1>Welcome back, Educator {teacher_name}!</h1>
-            <p>You have successfully logged in as a <strong>Teacher</strong>. Your administrative privileges are verified active.</p>
+            <p>You have successfully logged in as a <strong>Teacher</strong>. Your privileges are verified active.</p>
         </div>
     </body>
     </html>
@@ -144,7 +144,7 @@ def handle_web_heartbeat():
     return jsonify({"status": "Core synchronized", "timestamp": now_str})
 
 # =====================================================================
-# TKINTER MASTER ADMINISTRATIVE GUI
+# TKINTER COMMAND CONSOLE ENGINE
 # =====================================================================
 
 class NexusLearnAdminConsole:
@@ -206,12 +206,12 @@ class NexusLearnAdminConsole:
         hours_valid = self.ent_expiry.get().strip()
         
         if not username or not password or not hours_valid:
-            messagebox.showerror("Error", "All parameter windows must be completely assigned.")
+            messagebox.showerror("Error", "All parameter windows must be assigned.")
             return
         try:
             hours = int(hours_valid)
         except ValueError:
-            messagebox.showerror("Error", "Expiry duration value must be an integer (Hours).")
+            messagebox.showerror("Error", "Expiry value must be an integer (Hours).")
             return
             
         auth_pin = self.generate_unique_secure_pin()
@@ -226,12 +226,12 @@ class NexusLearnAdminConsole:
                     (username, password, auth_pin, payment, expiration_str)
                 )
                 conn.commit()
-            messagebox.showinfo("PIN Live", f"Authorization Node Written!\n\nGenerated PIN: {auth_pin}\nExpires: {expiration_str}")
+            messagebox.showinfo("PIN Live", f"Authorization Node Registered!\n\nPIN: {auth_pin}\nExpires: {expiration_str}")
             self.ent_user.delete(0, tk.END)
             self.ent_pass.delete(0, tk.END)
             self.refresh_all_monitors()
         except sqlite3.IntegrityError:
-            messagebox.showerror("Registry Collision", "Target account identifier already exists inside network arrays.")
+            messagebox.showerror("Registry Collision", "Target account handle already exists inside local ledger.")
 
     def refresh_all_monitors(self):
         for item in self.tree_accounts.get_children():
@@ -264,7 +264,7 @@ class NexusLearnAdminConsole:
         header.pack(fill="x")
         header.pack_propagate(False)
         
-        tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT COMMAND HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
+        tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
         tk.Label(header, text="Producer Access Layer", font=("Helvetica", 10, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.RIGHT, padx=20)
 
         notebook = ttk.Notebook(self.root)
