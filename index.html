@@ -27,7 +27,6 @@
             position: relative;
         }
 
-        /* PREMIUM GOLD FLOATING BACKGROUND LAYER */
         .bg-floating-layer {
             position: absolute;
             top: 0;
@@ -59,7 +58,6 @@
             }
         }
         
-        /* GOLD & CYBER BOOT / LOADING SCREEN */
         #boot-screen {
             position: fixed;
             top: 0;
@@ -123,7 +121,6 @@
             box-shadow: 0 0 10px var(--gold-primary);
         }
 
-        /* MAIN PORTAL CONTAINER WITH GLASSMORPHISM */
         .container {
             background-color: var(--panel-dark);
             backdrop-filter: blur(10px);
@@ -131,7 +128,7 @@
             padding: 40px;
             border-radius: 20px;
             text-align: center;
-            width: 360px;
+            width: 380px;
             box-shadow: 0 20px 45px rgba(0,0,0,0.8);
             z-index: 10;
             border: 1px solid rgba(212, 175, 55, 0.25);
@@ -167,7 +164,7 @@
         }
 
         label { display: block; text-align: left; font-size: 13px; margin-top: 15px; color: #E5E7EB; font-weight: 500; }
-        input {
+        input, textarea {
             width: 100%;
             padding: 12px;
             margin-top: 6px;
@@ -179,7 +176,7 @@
             font-size: 14px;
             transition: border-color 0.3s, box-shadow 0.3s;
         }
-        input:focus {
+        input:focus, textarea:focus {
             outline: none;
             border-color: var(--gold-primary);
             box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
@@ -233,7 +230,6 @@
             font-style: normal;
         }
         
-        /* HOMEPAGE LAB LAYOUT ADJUSTMENTS FOR EXTENDED ACTIVITIES */
         .live-av-status-badge {
             background-color: #1F2937;
             border: 1px solid var(--gold-primary);
@@ -279,6 +275,7 @@
         <h1 class="logo-icon">▲</h1>
         <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Educator Gateway</h2>
         <p class="subtitle" style="color: var(--text-muted);">Secure Terminal Authentication</p>
+        
         <div id="teacher-login-inputs">
             <label>Username / Email:</label>
             <input type="text" id="t-user" placeholder="Enter administrative login">
@@ -291,17 +288,29 @@
         
         <div id="teacher-homepage-activities" class="hidden">
             <div class="about-box" style="border-left-color: #5BC0BE;">
-                <strong>Welcome to Workspace Home!</strong><br>
-                Prepare lectures, manage scratchpads, upload tracking graphics, and spin up live classroom loops below.
+                <strong>Workspace Hub Portal</strong>
             </div>
-            <label>Lecture Pad Document Stream:</label>
-            <input type="text" id="t-hub-notepad" placeholder="Write lesson scratchpad notes here...">
-            <button class="btn btn-secondary" style="padding:8px; margin:5px 0;" onclick="alert('Image Note Imported! File context vectors extracted safely into workspace.')">Import Note / Image</button>
+
+            <label>Note Storage Tag Key:</label>
+            <input type="text" id="web-note-tag" value="Lecture_Segment_1">
+            <label>Notebook Area:</label>
+            <textarea id="web-note-body" rows="3" placeholder="Type long persistent class text files here..."></textarea>
+            
+            <div style="display:flex; gap:5px; margin-top:5px;">
+                <button class="btn btn-secondary" style="padding:6px; font-size:11px; margin:0;" onclick="handleWebSaveNote()">Save to Local Memory</button>
+                <button class="btn btn-secondary" style="padding:6px; font-size:11px; margin:0;" onclick="handleWebLoadNote()">Load Note Data</button>
+            </div>
+
+            <label style="margin-top:10px;">Audio / Music Broadcaster Tab:</label>
+            <div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span id="web-audio-track" style="font-size:11px; color:var(--text-muted);">Track: Default_Class_Audio.mp3</span>
+                <button style="background:none; border:none; color:var(--gold-primary); cursor:pointer;" onclick="document.getElementById('web-audio-track').innerText='🔊 Playing Audio Matrix...'">▶</button>
+            </div>
             
             <div style="margin-top:15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <label>Set 6-Digit Invitation Pin Matrix:</label>
-                <input type="text" id="t-custom-pin" placeholder="e.g. 8833AB">
-                <button class="btn btn-primary" onclick="launchCustomHubClassroom()">Create Classroom & Launch Call</button>
+                <label>Set Invitation Code PIN Matrix:</label>
+                <input type="text" id="t-custom-pin" placeholder="e.g. 5521XY">
+                <button class="btn btn-primary" onclick="launchCustomHubClassroom()">Create Classroom & Start Call</button>
             </div>
         </div>
         
@@ -335,7 +344,7 @@
             </div>
 
             <button class="btn btn-secondary" onclick="toggleStudentLocalMic()">Toggle My Audio Mute</button>
-            <button class="btn btn-secondary" style="border-color:#E63946;" onclick="alert('Leaving streaming workspace.'); location.reload();">Disconnect from Call</button>
+            <button class="btn btn-secondary" style="border-color:#E63946;" onclick="location.reload();">Disconnect from Call</button>
         </div>
 
         <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
@@ -346,7 +355,6 @@
     </div>
 
     <script>
-        // Floating decorative layers
         const layer = document.getElementById('floating-layer');
         const elements = ['📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️'];
         elements.forEach((emoji, index) => {
@@ -359,7 +367,6 @@
             layer.appendChild(span);
         });
 
-        // Fast boot initialization
         window.addEventListener('DOMContentLoaded', () => {
             let percent = 1;
             const textElement = document.getElementById('boot-text');
@@ -381,7 +388,7 @@
                         setTimeout(() => gatewayView.classList.add('active'), 50);
                     }, 600);
                 }
-            }, 15); // Fast boot acceleration
+            }, 15);
         });
 
         function switchView(viewId) {
@@ -396,11 +403,7 @@
             setTimeout(() => { targetView.classList.add('active'); }, 50);
         }
 
-        // =========================================================================
-        // ANTI-TIMEOUT SECURE CLOUD MESH ENGINE
-        // =========================================================================
         const SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request";
-        let sessionCheckInterval = null;
         let localMicMuted = false;
 
         function handleTeacherLogin() {
@@ -409,21 +412,32 @@
             const pin = document.getElementById('t-pin').value;
             
             if (user && pass && pin) {
-                // Reveal complete workspace activity home page on verification triggers
                 document.getElementById('teacher-login-inputs').classList.add('hidden');
                 document.getElementById('teacher-homepage-activities').classList.remove('hidden');
                 
                 const packet = { type: "TEACHER_LOGIN", username: user, password: pass, pin: pin, timestamp: Date.now() };
                 fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(packet) }).catch(() => {});
-            } else {
-                alert('Please fill out all administrative verification nodes.');
+            }
+        }
+
+        function handleWebSaveNote() {
+            const tag = document.getElementById('web-note-tag').value.trim();
+            const text = document.getElementById('web-note-body').value;
+            localStorage.setItem("nexus_note_" + tag, text);
+        }
+
+        function handleWebLoadNote() {
+            const tag = document.getElementById('web-note-tag').value.trim();
+            const found = localStorage.getItem("nexus_note_" + tag);
+            if(found !== null) {
+                document.getElementById('web-note-body').value = found;
             }
         }
 
         function launchCustomHubClassroom() {
             const customPin = document.getElementById('t-custom-pin').value.trim();
-            if(!customPin) { alert('Define invitation code parameter first.'); return; }
-            alert('Custom call channels established successfully! Connecting dashboard nodes...');
+            if(!customPin) return;
+            switchView('gateway-view');
         }
 
         function handleStudentLogin() {
@@ -437,8 +451,6 @@
                 const packet = { type: "STUDENT_LOGIN", name: name, code: code, timestamp: Date.now() };
                 fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(packet) }).catch(() => {});
                 startListeningForTeacherGlobalAVCommands(code);
-            } else {
-                alert('Please declare profile name and class code vectors.');
             }
         }
 
