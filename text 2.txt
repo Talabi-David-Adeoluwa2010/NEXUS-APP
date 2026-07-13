@@ -78,7 +78,7 @@ def verify_teacher_pin():
             "expires_at": teacher['expiration_timestamp']
         })
 
-# --- NEW WEB-ADMIN INTERACTION ENDPOINTS ---
+# --- WEB-ADMIN INTERACTION ENDPOINTS ---
 
 @server.route('/api/admin/logs', methods=['GET'])
 def get_admin_logs():
@@ -180,6 +180,7 @@ class NexusLearnAdminConsole:
             conn.commit()
 
     def generate_unique_secure_pin(self):
+        """Generates a secure system token formatted as: 4 numbers + 2 letters"""
         while True:
             digits = "".join(random.choices(string.digits, k=4))
             letters = "".join(random.choices(string.ascii_uppercase, k=2))
@@ -287,11 +288,18 @@ class NexusLearnAdminConsole:
         btn_commit = tk.Button(form_p, text="Commit & Generate PIN", command=self.register_and_expire_pin, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
         btn_commit.grid(row=0, column=4, rowspan=2, padx=20, pady=5)
         
+        # FIXED TABLE CONFIGURATION CODES (Assigned parameters matching database lists)
         self.tree_accounts = ttk.Treeview(tab1, columns=("u", "p", "f", "e"), show="headings")
         self.tree_accounts.heading("u", text="Educator Identity Handle")
         self.tree_accounts.heading("p", text="Permanent System PIN")
         self.tree_accounts.heading("f", text="Financial Log State")
         self.tree_accounts.heading("e", text="Expiration Deadline Bounds")
+        
+        # Setup clean table layouts for desktop readability
+        self.tree_accounts.column("u", width=220, anchor="w")
+        self.tree_accounts.column("p", width=160, anchor="center")
+        self.tree_accounts.column("f", width=160, anchor="center")
+        self.tree_accounts.column("e", width=260, anchor="center")
         self.tree_accounts.pack(fill="both", expand=True, padx=10, pady=5)
 
         tab2 = tk.Frame(notebook, bg="#0B132B")
