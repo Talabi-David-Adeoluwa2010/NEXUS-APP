@@ -358,14 +358,71 @@
             }, 50);
         }
 
+        // =========================================================================
+        // CENTRAL WEB CLOUD LINKAGE CONNECTOR (POLLING SYSTEM FOR GITHUB HOSTING)
+        // =========================================================================
+        const API_BASE_URL = "http://YOUR_SERVER_IP_OR_URL:5000"; // Replace with your live Flask backend URL
+        let sessionCheckInterval = null;
+
         function handleTeacherLogin() {
             const user = document.getElementById('t-user').value;
-            alert('Authenticating secure portal line: ' + user);
+            const pass = document.getElementById('t-pass').value;
+            const pin = document.getElementById('t-pin').value;
+            
+            if (user && pass && pin) {
+                fetch(`${API_BASE_URL}/api/client/verify-pin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass, pin: pin })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Authenticated successfully! Synchronizing session parameters with app window...');
+                        startPollingForAppSync(user, 'Teacher');
+                    } else {
+                        alert('Administrative authentication failed.');
+                    }
+                })
+                .catch(err => alert('Network Sync Timeout: Could not connect to public API server.'));
+            } else {
+                alert('Please fill out all administrative verification nodes.');
+            }
         }
 
         function handleStudentLogin() {
             const name = document.getElementById('s-name').value;
-            alert('Connecting ' + name + ' to classroom array.');
+            const code = document.getElementById('s-code').value;
+            
+            if (name && code) {
+                fetch(`${API_BASE_URL}/api/client/heartbeat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: name, role: 'Student', action: 'Joining from Web', session_id: code })
+                })
+                .then(() => {
+                    alert('Passing connection registration up to server structure...');
+                    startPollingForAppSync(name, 'Student', code);
+                })
+                .catch(err => alert('Failed Connection: Server signature unrecognized.'));
+            } else {
+                alert('Please declare profile name and class code vectors.');
+            }
+        }
+
+        function startPollingForAppSync(username, role, code = 'GLOBAL_NODE') {
+            if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+            
+            sessionCheckInterval = setInterval(() => {
+                fetch(`${API_BASE_URL}/api/client/session-status?username=${username}&session_id=${code}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "ACTIVE_IN_APP") {
+                        clearInterval(sessionCheckInterval);
+                        alert(`App connection established! Synced workspace interface as ${role}.`);
+                    }
+                })
+                .catch(err => console.log("Awaiting handshake confirmation link..."));
+            }, 3000);
         }
     </script>
 </body>
