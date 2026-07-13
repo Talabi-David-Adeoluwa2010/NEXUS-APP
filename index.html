@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusLearn // Enterprise Unified Web Client</title>
+    <title>NexusLearn // Premium Unified Learning Environment</title>
     <style>
         :root {
             --bg-dark: #050811;
-            --panel-dark: rgba(15, 22, 38, 0.98);
+            --panel-dark: rgba(15, 22, 38, 0.85);
             --gold-primary: #D4AF37;
             --gold-gradient: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7);
             --text-light: #FFFFFF;
@@ -18,263 +18,468 @@
             background-color: var(--bg-dark);
             color: var(--text-light);
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
             overflow: hidden;
+            position: relative;
         }
 
-        /* MASTER INTEGRATED PLATFORM SUITE INTERFACE PANELS */
-        .workspace-classroom-suite {
-            display: flex;
-            width: 98vw;
-            height: 92vh;
-            background-color: var(--panel-dark);
-            border-radius: 14px;
-            border: 1px solid rgba(212, 175, 55, 0.25);
+        .bg-floating-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            z-index: 100;
-            box-shadow: 0 30px 70px rgba(0,0,0,0.9);
+            z-index: 1;
+            pointer-events: none;
         }
-
-        .split-column-deck {
+        .floating-item {
+            position: absolute;
+            font-size: 45px;
+            opacity: 0.18;
+            filter: drop-shadow(0 0 8px var(--gold-primary));
+            animation: floatAnimation 14s infinite linear;
+            bottom: -70px;
+        }
+        @keyframes floatAnimation {
+            0% {
+                transform: translateY(0) rotate(0deg) scale(0.8);
+                opacity: 0;
+            }
+            15% { opacity: 0.22; }
+            85% { opacity: 0.22; }
+            100% {
+                transform: translateY(-115vh) rotate(360deg) scale(1.2);
+                opacity: 0;
+            }
+        }
+        
+        #boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-dark);
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
             padding: 20px;
-            gap: 15px;
-            border-right: 1px solid rgba(212, 175, 55, 0.15);
             box-sizing: border-box;
         }
-
-        #left-av-block { flex: 1.1; min-width: 380px; }
-        #center-chat-block { flex: 1; min-width: 340px; }
-        #right-extract-block { flex: 0.9; min-width: 320px; resize: horizontal; overflow: auto; background-color: rgba(5, 8, 17, 0.5); border-right: none; }
-
-        .video-box-matrix {
-            flex: 1;
-            background-color: #000000;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
+        .boot-logo {
+            color: var(--gold-primary);
+            font-size: 40px;
+            font-weight: bold;
             text-align: center;
-            padding: 10px;
-            box-shadow: inset 0 0 25px rgba(0,0,0,0.95);
-            font-family: monospace;
+            line-height: 1.2;
+            margin-bottom: 15px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
         }
-
-        /* LIVE CHAT ENGINE SCROLL CONTAINER BOX */
-        .chat-display-window {
-            flex: 1;
-            background-color: #000000;
+        
+        .boot-about-box {
+            background-color: #111827;
+            border: 1px solid rgba(212, 175, 55, 0.3);
             border-radius: 10px;
-            border: 1px solid #1F2937;
-            padding: 15px;
-            overflow-y: auto;
+            padding: 18px;
             font-size: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            color: #E5E7EB;
+            line-height: 1.6;
+            max-width: 340px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
 
-        .chat-msg-row { line-height: 1.4; word-break: break-all; }
-        .chat-time { color: var(--text-muted); font-size: 11px; margin-right: 6px; }
-        .chat-user { color: var(--gold-primary); font-weight: bold; margin-right: 6px; }
+        .boot-pct {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--gold-primary);
+            font-weight: bold;
+        }
+        .progress-bar-container {
+            width: 300px;
+            height: 8px;
+            background-color: #1F2937;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--gold-gradient);
+            box-shadow: 0 0 10px var(--gold-primary);
+        }
 
         .container {
             background-color: var(--panel-dark);
-            padding: 45px;
-            border-radius: 24px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
             text-align: center;
-            width: 410px;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.7);
-            z-index: 1000;
+            width: 380px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.8);
+            z-index: 10;
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        
+        .container.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        h1.logo-icon { 
+            color: var(--gold-primary); 
+            font-size: 46px; 
+            margin: 0 0 5px 0; 
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+        }
+        h2 { font-size: 26px; margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px; }
+        p.subtitle { color: var(--gold-primary); font-size: 13px; margin: 0 0 25px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
+        
+        .about-box {
+            background-color: var(--bg-dark);
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 13px;
+            color: #D1D5DB;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            text-align: left;
+            border-left: 4px solid var(--gold-primary);
         }
 
-        label { display: block; text-align: left; font-size: 13px; margin-top: 14px; color: #D1D5DB; }
+        label { display: block; text-align: left; font-size: 13px; margin-top: 15px; color: #E5E7EB; font-weight: 500; }
         input, textarea {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             margin-top: 6px;
             box-sizing: border-box;
-            background-color: #000000;
-            border: 1px solid #374151;
+            background-color: var(--bg-dark);
+            border: 1px solid #1F2937;
             border-radius: 8px;
             color: var(--text-light);
             font-size: 14px;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
-        input:focus, textarea:focus { border-color: var(--gold-primary); outline: none; }
-
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+        }
+        
         .btn {
             display: block;
             width: 100%;
-            padding: 14px;
-            margin-top: 14px;
+            padding: 15px;
+            margin: 18px 0 5px 0;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: bold;
-            font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.25s ease;
         }
-        .btn-primary { background: var(--gold-gradient); color: #050811; }
-        .btn-secondary { background-color: #0F1626; color: var(--gold-primary); border: 1px solid var(--gold-primary); }
-        .btn-secondary:hover { background-color: rgba(212, 175, 55, 0.08); }
-
+        .btn-primary { 
+            background: var(--gold-gradient);
+            color: var(--bg-dark); 
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); 
+        }
+        .btn-secondary { 
+            background-color: #0F1626; 
+            color: var(--gold-primary); 
+            border: 2px solid var(--gold-primary); 
+        }
+        .btn-secondary:hover { 
+            background-color: rgba(212, 175, 55, 0.1); 
+            transform: translateY(-2px); 
+        }
+        .btn-text { background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; margin-top: 15px; font-size: 13px; }
+        .btn-text:hover { color: var(--gold-primary); }
+        
+        .fixed-left-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 25px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            font-style: italic;
+            z-index: 10000;
+            letter-spacing: 0.5px;
+        }
+        .fixed-left-footer strong {
+            color: var(--gold-primary);
+            font-style: normal;
+        }
+        
+        .live-av-status-badge {
+            background-color: #1F2937;
+            border: 1px solid var(--gold-primary);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: monospace;
+            margin: 10px 0;
+            color: #5BC0BE;
+        }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="auth-gateway" class="container">
-        <h2 style="color:var(--gold-primary); margin:0 0 5px 0; font-size:32px; font-weight:800;">NexusLearn Suite</h2>
-        <p style="color:var(--text-muted); font-size:11px; margin:0 0 35px 0; letter-spacing:1px; font-weight:bold; text-transform:uppercase;">Unified Platform Live Control Ecosystem</p>
-        
-        <button class="btn btn-primary" onclick="triggerPortalSetup('teacher')">[ Host Workspace as Instructor ]</button>
-        <button class="btn btn-secondary" onclick="triggerPortalSetup('student')">[ Join Active Learning Node ]</button>
+    <div class="bg-floating-layer" id="floating-layer"></div>
 
-        <div id="dynamic-fields-area" class="hidden" style="margin-top:25px; border-top:1px solid rgba(212, 175, 55, 0.2); padding-top:20px;">
-            <label id="input-profile-string-lbl"></label>
-            <input type="text" id="main-user-handle" value="Web_User_Node">
-            
-            <label style="margin-top:12px;">Class Identification Pin Access Code Matrix:</label>
-            <input type="text" id="main-room-pin" value="Z5K9P3">
-            
-            <button class="btn btn-primary" style="background: linear-gradient(135deg, #BF953F, #FBF5B7); color:#000; margin-top:25px;" onclick="deployLiveWorkspaceSuite()">Initialize Active Workspace Suite</button>
+    <div id="boot-screen">
+        <div class="boot-logo">▲<br>NEXUSLEARN</div>
+        <div class="boot-about-box">
+            <strong>About the App:</strong><br>
+            A premium high-performance network platform engineered to connect live classrooms, deploy secure CBT modules, and sync administration controls safely.
+        </div>
+        <div id="boot-text" class="boot-pct">System Booting: 01%</div>
+        <div class="progress-bar-container">
+            <div id="progress-fill" class="progress-bar-fill"></div>
         </div>
     </div>
 
-    <div id="live-classroom-view-suite" class="workspace-classroom-suite hidden">
+    <div id="gateway-view" class="container hidden">
+        <h1 class="logo-icon">▲</h1>
+        <h2>NexusLearn</h2>
+        <p class="subtitle">Unified Learning Environment</p>
+        <div class="about-box">
+            <strong>Platform Information:</strong><br>
+            A secure visual gateway providing direct control linkages for educators and system node streams for active student tracking environments.
+        </div>
+        <button class="btn btn-primary" onclick="switchView('teacher-view')">[ I am a Teacher ]</button>
+        <button class="btn btn-secondary" onclick="switchView('student-view')">[ I am a Student ]</button>
+    </div>
+
+    <div id="teacher-view" class="container hidden">
+        <h1 class="logo-icon">▲</h1>
+        <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Educator Gateway</h2>
+        <p class="subtitle" style="color: var(--text-muted);">Secure Terminal Authentication</p>
         
-        <div class="split-column-deck" id="left-av-block">
-            <div style="font-size:12px; font-weight:800; color:var(--gold-primary); letter-spacing:0.8px;" id="header-data-bus-string">ROOM BUS LIVE // LOG MATRIX SYNCING</div>
-            
-            <div class="video-box-matrix" id="local-cam-video" style="border-left: 5px solid #5BC0BE;">
-                🎥 CHASSIS FEED OUT: LOCAL HD WEBCAM TRANSMITTING [30FPS SYNCED]
-            </div>
-            
-            <div class="video-box-matrix" id="remote-peer-video" style="border-left: 5px solid var(--gold-primary);">
-                🔊 REMOTE INTERACTION MONITOR ENABLED // P2P NETWORK OVERLAY DOCK SECURED
+        <div id="teacher-login-inputs">
+            <label>Username / Email:</label>
+            <input type="text" id="t-user" placeholder="Enter administrative login">
+            <label>Password:</label>
+            <input type="password" id="t-pass" placeholder="Enter account password">
+            <label>Admin Authorization PIN:</label>
+            <input type="text" id="t-pin" placeholder="Enter secure PIN matrix">
+            <button class="btn btn-primary" onclick="handleTeacherLogin()">Verify Credentials</button>
+        </div>
+        
+        <div id="teacher-homepage-activities" class="hidden">
+            <div class="about-box" style="border-left-color: #5BC0BE;">
+                <strong>Workspace Hub Portal</strong>
             </div>
 
-            <div style="background:rgba(0,0,0,0.7); padding:12px; border-radius:10px; display:flex; align-items:center; justify-content:space-between; border:1px solid rgba(212, 175, 55, 0.15);">
-                <span id="audio-deck-lbl" style="font-size:12px; color:var(--text-muted); font-family:monospace;">Audio Vector: Track Standby</span>
-                <button class="btn btn-secondary" style="width:auto; margin:0; padding:5px 12px; font-size:11px;" onclick="simImportAudioTrack()">Import Track</button>
+            <label>Note Storage Tag Key:</label>
+            <input type="text" id="web-note-tag" value="Lecture_Segment_1">
+            <label>Notebook Area:</label>
+            <textarea id="web-note-body" rows="3" placeholder="Type long persistent class text files here..."></textarea>
+            
+            <div style="display:flex; gap:5px; margin-top:5px;">
+                <button class="btn btn-secondary" style="padding:6px; font-size:11px; margin:0;" onclick="handleWebSaveNote()">Save to Local Memory</button>
+                <button class="btn btn-secondary" style="padding:6px; font-size:11px; margin:0;" onclick="handleWebLoadNote()">Load Note Data</button>
             </div>
 
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" style="margin:0; flex:1;" id="cam-toggle-trigger" onclick="toggleLocalHardware()">Toggle Camera</button>
-                <button class="btn btn-secondary" style="margin:0; flex:1; border-color:#E63946; color:#E63946;" onclick="location.reload()">Disconnect</button>
+            <label style="margin-top:10px;">Audio / Music Broadcaster Tab:</label>
+            <div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:6px; display:flex; align-items:center; justify-content:space-between;">
+                <span id="web-audio-track" style="font-size:11px; color:var(--text-muted);">Track: Default_Class_Audio.mp3</span>
+                <button style="background:none; border:none; color:var(--gold-primary); cursor:pointer;" onclick="document.getElementById('web-audio-track').innerText='🔊 Playing Audio Matrix...'">▶</button>
+            </div>
+            
+            <div style="margin-top:15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <label>Set Invitation Code PIN Matrix:</label>
+                <input type="text" id="t-custom-pin" placeholder="e.g. 5521XY">
+                <button class="btn btn-primary" onclick="launchCustomHubClassroom()">Create Classroom & Start Call</button>
             </div>
         </div>
+        
+        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
+    </div>
 
-        <div class="split-column-deck" id="center-chat-block">
-            <div style="font-size:11px; font-weight:bold; color:var(--gold-primary); letter-spacing:0.5px;">💬 LIVE ROOM MESSAGING DECK</div>
-            <div class="chat-display-window" id="chat-logs-viewport">
-                </div>
-            <div style="display:flex; gap:6px;">
-                <input type="text" id="chat-input-field" placeholder="Type text packet transmission entry..." onkeydown="if(event.key === 'Enter') fireWebChatMessage()">
-                <button class="btn btn-primary" style="width:auto; margin:0; padding:0 20px;" onclick="fireWebChatMessage()">Send</button>
+    <div id="student-view" class="container hidden">
+        <h1 class="logo-icon">▲</h1>
+        <h2 style="color: var(--gold-primary); margin-bottom: 5px;">Student Gateway</h2>
+        <p class="subtitle" style="color: var(--text-muted);">Classroom Node Interface</p>
+        
+        <div id="student-join-gate">
+            <label>Your Screen Profile Name:</label>
+            <input type="text" id="s-name" placeholder="Enter your full name">
+            <label>Active Classroom Code:</label>
+            <input type="text" id="s-code" placeholder="Enter 6-digit active code">
+            <button class="btn btn-primary" onclick="handleStudentLogin()">Initialize Node Connection</button>
+        </div>
+
+        <div id="student-live-room" class="hidden">
+            <div class="live-av-status-badge" id="av-status-indicator">
+                🔴 CALL LIVE // AUDIO: ACTIVE | CAM: STREAMING
             </div>
-        </div>
-
-        <div class="split-column-deck" id="right-extract-block">
-            <label style="font-size:11px; font-weight:bold; color:var(--gold-primary); margin:0;">📎 RESIZABLE TOOL WORKPAD MATRIX PANEL</label>
-            <input type="text" id="web-storage-tag" value="Session_Extract_Data">
-            <textarea id="web-storage-body" style="flex:1; margin-top:8px; font-family:'Consolas', monospace; font-size:13px; line-height:1.5;" placeholder="Track technical logs, capture workspace files, or pull standard structural note properties here..."></textarea>
+            <div class="about-box" id="student-content-display">
+                [Awaiting Instructional Materials, Imported Images and Broadcast vectors from Teacher]
+            </div>
             
-            <button class="btn btn-primary" style="margin-top:12px; font-size:12px; padding:12px;" onclick="executeDataVaultWrite()">💾 Save/Extract Data Archive</button>
-            <button class="btn btn-secondary" style="margin-top:6px; font-size:12px; padding:10px;" onclick="executeDataVaultRead()">📂 Load Data Archive</button>
+            <div id="break-countdown-panel" class="hidden" style="background-color:#781D1D; padding:10px; border-radius:8px; margin-bottom:10px;">
+                <span style="color:#FFB703; font-weight:bold;">⚠️ BREAK TIME ACTIVE</span>
+                <div id="break-timer-clock" style="font-size:20px; font-family:monospace;">10:00</div>
+            </div>
+
+            <button class="btn btn-secondary" onclick="toggleStudentLocalMic()">Toggle My Audio Mute</button>
+            <button class="btn btn-secondary" style="border-color:#E63946;" onclick="location.reload();">Disconnect from Call</button>
         </div>
 
+        <button class="btn btn-text" onclick="switchView('gateway-view')">← Return to Gateway</button>
+    </div>
+
+    <div class="fixed-left-footer">
+        producer/founder - <strong>Talabi David Adeoluwa</strong>
     </div>
 
     <script>
-        let operationalProfile = "";
-        let cameraActiveFlag = true;
+        const layer = document.getElementById('floating-layer');
+        const elements = ['📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️', '📚', '✏️'];
+        elements.forEach((emoji, index) => {
+            const span = document.createElement('span');
+            span.className = 'floating-item';
+            span.innerText = emoji;
+            span.style.left = `${(index * 8) + Math.random() * 6}%`;
+            span.style.animationDelay = `${Math.random() * 7}s`;
+            span.style.animationDuration = `${9 + Math.random() * 6}s`;
+            layer.appendChild(span);
+        });
 
-        function triggerPortalSetup(role) {
-            operationalProfile = role;
-            document.getElementById('dynamic-fields-area').classList.remove('hidden');
-            document.getElementById('input-profile-string-lbl').innerText = role === 'teacher' ?
-                "Set Instructor Configuration Name Tag:" : "Set Connected Student Node Identifier:";
+        window.addEventListener('DOMContentLoaded', () => {
+            let percent = 1;
+            const textElement = document.getElementById('boot-text');
+            const fillElement = document.getElementById('progress-fill');
+            const bootScreen = document.getElementById('boot-screen');
+            const gatewayView = document.getElementById('gateway-view');
+
+            const interval = setInterval(() => {
+                percent++;
+                textElement.innerText = `System Booting: ${percent < 10 ? '0' + percent : percent}%`;
+                fillElement.style.width = `${percent}%`;
+
+                if (percent >= 100) {
+                    clearInterval(interval);
+                    bootScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        bootScreen.style.display = 'none';
+                        gatewayView.classList.remove('hidden');
+                        setTimeout(() => gatewayView.classList.add('active'), 50);
+                    }, 600);
+                }
+            }, 15);
+        });
+
+        function switchView(viewId) {
+            const views = ['gateway-view', 'teacher-view', 'student-view'];
+            views.forEach(id => {
+                const view = document.getElementById(id);
+                view.classList.remove('active');
+                view.classList.add('hidden');
+            });
+            const targetView = document.getElementById(viewId);
+            targetView.classList.remove('hidden');
+            setTimeout(() => { targetView.classList.add('active'); }, 50);
         }
 
-        function deployLiveWorkspaceSuite() {
-            const handle = document.getElementById('main-user-handle').value.trim();
-            const securityPin = document.getElementById('main-room-pin').value.trim();
+        const SECURE_CLOUD_ENDPOINT = "https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_request";
+        let localMicMuted = false;
 
-            if(handle && securityPin) {
-                document.getElementById('auth-gateway').classList.add('hidden');
-                document.getElementById('live-classroom-view-suite').classList.remove('hidden');
-                document.getElementById('header-data-bus-string').innerText = `🔴 NEXUS ROOM ACTIVE // INTERFACE PIN: ${securityPin.toUpperCase()} // USER HANDLE: ${handle}`;
+        function handleTeacherLogin() {
+            const user = document.getElementById('t-user').value.trim();
+            const pass = document.getElementById('t-pass').value;
+            const pin = document.getElementById('t-pin').value;
+            
+            if (user && pass && pin) {
+                document.getElementById('teacher-login-inputs').classList.add('hidden');
+                document.getElementById('teacher-homepage-activities').classList.remove('hidden');
                 
-                // Inject an initial system sync entry row to let the user see it work instantly
-                appendChatMessageToViewport("System", "Handshake negotiation verified. Live session operational channel open.");
+                const packet = { type: "TEACHER_LOGIN", username: user, password: pass, pin: pin, timestamp: Date.now() };
+                fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(packet) }).catch(() => {});
             }
         }
 
-        function toggleLocalHardware() {
-            cameraActiveFlag = !cameraActiveFlag;
-            const container = document.getElementById('local-cam-video');
-            const button = document.getElementById('cam-toggle-trigger');
-            
-            container.innerText = cameraActiveFlag ? "🎥 CHASSIS FEED OUT: LOCAL HD WEBCAM TRANSMITTING [30FPS SYNCED]" : "[ ❌ LOCAL WEBCAM DISCONNECTED (BLOCKED) ]";
-            container.style.backgroundColor = cameraActiveFlag ? "#000000" : "#1A050A";
-            button.innerText = cameraActiveFlag ? "Close Camera" : "Open Camera";
+        function handleWebSaveNote() {
+            const tag = document.getElementById('web-note-tag').value.trim();
+            const text = document.getElementById('web-note-body').value;
+            localStorage.setItem("nexus_note_" + tag, text);
         }
 
-        function simImportAudioTrack() {
-            document.getElementById('audio-deck-lbl').innerText = "▶ Track: custom_imported_stream.mp3";
-            document.getElementById('audio-deck-lbl').style.color = "var(--gold-primary)";
-        }
-
-        // --- REAL-TIME LIVE CHAT IMPLEMENTATION ---
-        function fireWebChatMessage() {
-            const inputField = document.getElementById('chat-input-field');
-            const contentText = inputField.value.trim();
-            const senderHandle = document.getElementById('main-user-handle').value.trim() || "User_Node";
-            
-            if(!contentText) return;
-            
-            appendChatMessageToViewport(senderHandle, contentText);
-            inputField.value = "";
-        }
-
-        function appendChatMessageToViewport(sender, message) {
-            const viewport = document.getElementById('chat-logs-viewport');
-            const now = new Date();
-            const stamp = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-            
-            const messageRow = document.createElement('div');
-            messageRow.className = "chat-msg-row";
-            messageRow.innerHTML = `<span class="chat-time">[${stamp}]</span><span class="chat-user">${sender}:</span><span class="chat-body">${message}</span>`;
-            
-            viewport.appendChild(messageRow);
-            viewport.scrollTop = viewport.scrollHeight; // Keep message list down to newest entries
-        }
-
-        // --- PERSISTENT DATA VAULT HOOK TRANSACTION WRITERS ---
-        function executeDataVaultWrite() {
-            const key = document.getElementById('web-storage-tag').value.trim();
-            const payload = document.getElementById('web-storage-body').value;
-            localStorage.setItem("nexus_vault_" + key, payload);
-            alert("Workspace elements completely extracted and synced!");
-        }
-
-        function executeDataVaultRead() {
-            const key = document.getElementById('web-storage-tag').value.trim();
-            const fetchedData = localStorage.getItem("nexus_vault_" + key);
-            if(fetchedData !== null) {
-                document.getElementById('web-storage-body').value = fetchedData;
-            } else {
-                alert("No data records found under this lookup parameter.");
+        function handleWebLoadNote() {
+            const tag = document.getElementById('web-note-tag').value.trim();
+            const found = localStorage.getItem("nexus_note_" + tag);
+            if(found !== null) {
+                document.getElementById('web-note-body').value = found;
             }
+        }
+
+        function launchCustomHubClassroom() {
+            const customPin = document.getElementById('t-custom-pin').value.trim();
+            if(!customPin) return;
+            switchView('gateway-view');
+        }
+
+        function handleStudentLogin() {
+            const name = document.getElementById('s-name').value.trim();
+            const code = document.getElementById('s-code').value.trim();
+            
+            if (name && code) {
+                document.getElementById('student-join-gate').classList.add('hidden');
+                document.getElementById('student-live-room').classList.remove('hidden');
+                
+                const packet = { type: "STUDENT_LOGIN", name: name, code: code, timestamp: Date.now() };
+                fetch(SECURE_CLOUD_ENDPOINT, { method: 'POST', body: JSON.stringify(packet) }).catch(() => {});
+                startListeningForTeacherGlobalAVCommands(code);
+            }
+        }
+
+        function toggleStudentLocalMic() {
+            localMicMuted = !localMicMuted;
+            document.getElementById('av-status-indicator').innerText = localMicMuted ? 
+                "🔴 CALL LIVE // AUDIO: MUTED BY SELF | CAM: STREAMING" : 
+                "🔴 CALL LIVE // AUDIO: ACTIVE | CAM: STREAMING";
+        }
+
+        function startListeningForTeacherGlobalAVCommands(sessionPin) {
+            setInterval(() => {
+                fetch(`https://kvdb.io/K99vVnZgYqN7Cg8n5vP9a7/nexus_broadcast_${sessionPin}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.action === "AV_OVERRIDE") {
+                        if(data.channel === "AUDIO") {
+                            document.getElementById('av-status-indicator').innerText = data.state === "MUTED" ?
+                                "❌ MUTED BY TEACHER // CAMERA ACTIVE" : "🔴 CALL LIVE // AUDIO: ACTIVE | CAM: STREAMING";
+                        }
+                    } else if (data.action === "BREAK_START") {
+                        document.getElementById('break-countdown-panel').classList.remove('hidden');
+                    } else if (data.action === "BREAK_END") {
+                        document.getElementById('break-countdown-panel').classList.add('hidden');
+                    } else if (data.action === "MEDIA_SHARE") {
+                        document.getElementById('student-content-display').innerHTML = `<strong>Broadcast Note received:</strong><br>${data.filename}`;
+                    }
+                }).catch(() => {});
+            }, 3000);
         }
     </script>
 </body>
