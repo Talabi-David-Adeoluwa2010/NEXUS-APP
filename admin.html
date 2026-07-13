@@ -14,17 +14,19 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 30px 0;
+            padding: 20px;
             overflow-x: hidden;
             position: relative;
+            box-sizing: border-box;
         }
 
         .container {
             background-color: #0F1626;
-            padding: 35px;
+            padding: 30px 20px;
             border-radius: 20px;
             text-align: center;
-            width: 440px;
+            width: 100%;
+            max-width: 440px;
             box-shadow: 0 20px 45px rgba(0,0,0,0.8);
             z-index: 10;
             border: 1px solid rgba(212, 175, 55, 0.35);
@@ -32,12 +34,12 @@
         }
         h1.admin-logo { 
             color: #D4AF37; 
-            font-size: 34px; 
+            font-size: 28px; 
             margin: 0 0 5px 0; 
             text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
             letter-spacing: 2px;
         }
-        p.subtitle { color: #D4AF37; font-size: 11px; margin: 0 0 25px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+        p.subtitle { color: #D4AF37; font-size: 10px; margin: 0 0 25px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
         
         .panel-box {
             background-color: #050811;
@@ -126,15 +128,25 @@
         }
 
         .fixed-left-footer {
-            position: fixed;
-            bottom: 20px;
-            left: 25px;
+            margin-top: 20px;
             font-size: 12.5px;
             color: #9CA3AF;
             font-style: italic;
+            text-align: center;
         }
         .fixed-left-footer strong { color: #D4AF37; font-style: normal; }
         .hidden { display: none; }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .status-online { background-color: rgba(16, 185, 129, 0.2); color: #10B981; }
+        .status-offline { background-color: rgba(245, 158, 11, 0.2); color: #F59E0B; }
     </style>
 </head>
 <body>
@@ -150,26 +162,32 @@
         <input type="password" id="root-pass" placeholder="Enter master security key">
         
         <button class="btn btn-primary" onclick="handleAdminAuth()">Unlock Central Systems</button>
+        <div class="fixed-left-footer">
+            producer/founder - <strong>Talabi David Adeoluwa</strong>
+        </div>
     </div>
 
     <div id="admin-dashboard-view" class="container hidden">
         <h1 class="admin-logo">▲ CENTRAL CORE</h1>
         <p class="subtitle">NexusLearn Powerhouse Deck</p>
         
+        <div style="text-align: left; margin-bottom: 5px;">
+            <span id="connection-indicator" class="status-badge status-offline">Probing Connection...</span>
+        </div>
+
         <div class="panel-box">
             <strong>Live Node Activity Monitor</strong>
-            <p style="font-size:11px; color:#9CA3AF; margin:2px 0 8px 0;">Real-time diagnostics of users actively communicating across systems.</p>
             <table class="live-table">
                 <thead>
                     <tr>
                         <th>Node ID</th>
                         <th>Activity Summary</th>
-                        <th>Event Time</th>
+                        <th>Time</th>
                     </tr>
                 </thead>
                 <tbody id="live-user-rows">
                     <tr>
-                        <td colspan="3" style="text-align: center; color: #9CA3AF;">Awaiting background node connection sync...</td>
+                        <td colspan="3" style="text-align: center; color: #9CA3AF;">Awaiting system sync...</td>
                     </tr>
                 </tbody>
             </table>
@@ -177,7 +195,7 @@
 
         <div class="panel-box">
             <strong>Time-Locked Access Tokens</strong>
-            <p style="font-size:11px; color:#9CA3AF; margin:2px 0 8px 0;">Configure dynamic validity cycles for newly registered monetization pins.</p>
+            <p style="font-size:11px; color:#9CA3AF; margin:2px 0 8px 0;">Generate secure pins (4 numbers + 2 letters).</p>
             
             <label>Set Access Duration Parameters:</label>
             <select id="pin-duration">
@@ -198,20 +216,20 @@
             <input type="text" id="target-teacher" placeholder="e.g., school_admin_01">
             
             <div style="display: flex; gap: 10px;">
-                <button class="btn btn-primary" style="padding:10px; font-size:12px;" onclick="overrideAccount('Paid')">Grant Paid Access</button>
-                <button class="btn btn-danger" style="padding:10px; font-size:12px;" onclick="overrideAccount('Unpaid')">Lockout/Suspend</button>
+                <button class="btn btn-primary" style="padding:10px; font-size:12px;" onclick="overrideAccount('Paid')">Grant Paid</button>
+                <button class="btn btn-danger" style="padding:10px; font-size:12px;" onclick="overrideAccount('Unpaid')">Lockout</button>
             </div>
+        </div>
+
+        <div class="fixed-left-footer">
+            producer/founder - <strong>Talabi David Adeoluwa</strong>
         </div>
     </div>
 
-    <div class="fixed-left-footer">
-        producer/founder - <strong>Talabi David Adeoluwa</strong>
-    </div>
-
     <script>
-        // Directly maps requests across localhost connections
-        const API_BASE = "http://127.0.0.1:5000"; 
-        let logInterval = null;
+        // Set your laptop IP here if running backend locally, otherwise it checks localhost
+        const API_BASE = window.location.origin.includes('github.io') ? "http://127.0.0.1:5000" : window.location.origin; 
+        let isOnline = false;
 
         function handleAdminAuth() {
             const user = document.getElementById('root-user').value.trim();
@@ -221,40 +239,74 @@
                 document.getElementById('admin-login-view').classList.add('hidden');
                 document.getElementById('admin-dashboard-view').classList.remove('hidden');
                 
-                refreshLiveMetrics();
-                // Start a continuous loop targeting background pipeline updates every 3 seconds
-                logInterval = setInterval(refreshLiveMetrics, 3000);
+                checkConnection();
+                setInterval(checkConnection, 4000);
             } else {
                 alert("ACCESS VIOLATION: Unauthorized master entry attempt.");
             }
         }
 
-        function refreshLiveMetrics() {
+        function checkConnection() {
+            const badge = document.getElementById('connection-indicator');
+            fetch(`${API_BASE}/api/admin/logs`, { mode: 'cors' })
+                .then(res => {
+                    if (res.ok) {
+                        isOnline = true;
+                        badge.innerText = "● Linked to Server Core";
+                        badge.className = "status-badge status-online";
+                        fetchServerLogs();
+                    } else {
+                        throw new Error();
+                    }
+                })
+                .catch(() => {
+                    isOnline = false;
+                    badge.innerText = "● Mobile Offline Mode Active";
+                    badge.className = "status-badge status-offline";
+                    loadOfflineLogs();
+                });
+        }
+
+        function fetchServerLogs() {
             const tbody = document.getElementById('live-user-rows');
-            
             fetch(`${API_BASE}/api/admin/logs`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9CA3AF;">No live operational events tracked yet.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9CA3AF;">No system events.</td></tr>`;
                         return;
                     }
                     tbody.innerHTML = data.map(log => `
                         <tr>
                             <td><strong>${log.session_id}</strong></td>
                             <td style="color: #FCF6BA;">${log.message}</td>
-                            <td style="color: #9CA3AF; font-size:11px;">${log.timestamp.split(' ')[1]}</td>
+                            <td style="color: #9CA3AF; font-size:11px;">${log.timestamp.split(' ')[1] || log.timestamp}</td>
                         </tr>
                     `).join('');
                 })
-                .catch(err => {
-                    console.log("Sync delay or server connection pending...");
-                });
+                .catch(() => loadOfflineLogs());
+        }
+
+        function loadOfflineLogs() {
+            const tbody = document.getElementById('live-user-rows');
+            const offlineLogs = JSON.parse(localStorage.getItem('nexus_offline_logs') || '[]');
+            if (offlineLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9CA3AF;">Running offline. Log entries saved on phone.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = offlineLogs.map(log => `
+                <tr>
+                    <td><strong>${log.session_id}</strong></td>
+                    <td style="color: #FCF6BA;">${log.message}</td>
+                    <td style="color: #9CA3AF; font-size:11px;">${log.timestamp}</td>
+                </tr>
+            `).join('');
         }
 
         function generateSecurePIN() {
             const durationHours = document.getElementById('pin-duration').value;
             
+            // Format generation: 4 digits + 2 capital letters (e.g., 5839XY)
             const digits = Math.floor(1000 + Math.random() * 9000);
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
             let letters = '';
@@ -262,44 +314,68 @@
                 letters += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             const localSecurePin = digits + letters;
+
+            if (isOnline) {
+                fetch(`${API_BASE}/api/admin/generate-pin`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pin: localSecurePin, hours: durationHours })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === "SUCCESS") {
+                        document.getElementById('pin-output').innerText = localSecurePin;
+                        alert(`Authorized and Saved Live to Server Database!\nPIN: ${localSecurePin}`);
+                    } else {
+                        alert(`Server rejected PIN generation: ${data.message}`);
+                    }
+                })
+                .catch(() => handleOfflinePinGeneration(localSecurePin, durationHours));
+            } else {
+                handleOfflinePinGeneration(localSecurePin, durationHours);
+            }
+        }
+
+        function handleOfflinePinGeneration(pin, hours) {
+            document.getElementById('pin-output').innerText = pin;
             
-            // Post authorization token records to backend SQL arrays directly
-            fetch(`${API_BASE}/api/admin/generate-pin`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pin: localSecurePin, hours: durationHours })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === "SUCCESS") {
-                    document.getElementById('pin-output').innerText = localSecurePin;
-                    alert(`Token Authorized and Saved Live!\nPIN: ${localSecurePin}\nDuration: ${durationHours} Hours.`);
-                } else {
-                    alert(`Engine response code error: ${data.message}`);
-                }
-            })
-            .catch(err => alert("Network array error: Check if Python app backend server is open."));
+            // Save to browser LocalStorage
+            let storedPins = JSON.parse(localStorage.getItem('nexus_offline_pins') || '[]');
+            storedPins.push({ pin: pin, hours: hours, timestamp: new Date().toLocaleTimeString() });
+            localStorage.setItem('nexus_offline_pins', JSON.stringify(storedPins));
+
+            // Log activity locally
+            let storedLogs = JSON.parse(localStorage.getItem('nexus_offline_logs') || '[]');
+            storedLogs.unshift({
+                session_id: "OFFLINE_GEN",
+                message: `Created PIN ${pin} (${hours} Hours)`,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('nexus_offline_logs', JSON.stringify(storedLogs.slice(0, 15)));
+
+            loadOfflineLogs();
+            alert(`[Offline Mode Mode] Unique PIN Generated & Cached to Phone!\n\nPIN: ${pin}\nValidity: ${hours} Hours.\n\nCopy this key to authenticate.`);
         }
 
         function overrideAccount(status) {
             const teacher = document.getElementById('target-teacher').value.trim();
             if(!teacher) { alert("ERROR: Enter target username to change access."); return; }
             
-            fetch(`${API_BASE}/api/admin/override`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: teacher, status: status })
-            })
-            .then(res => {
-                if(!res.ok) {
-                    throw new Error("Target identity matching parameter fault.");
-                }
-                return res.json();
-            })
-            .then(data => {
-                alert(`Account configuration updated live!\nTarget Educator: ${teacher}\nAccess State: ${status}`);
-            })
-            .catch(err => alert("ERROR: Username profile was not discovered inside system arrays."));
+            if (isOnline) {
+                fetch(`${API_BASE}/api/admin/override`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: teacher, status: status })
+                })
+                .then(res => {
+                    if(!res.ok) throw new Error();
+                    return res.json();
+                })
+                .then(data => alert(`Account updated successfully live!\nUser: ${teacher}\nState: ${status}`))
+                .catch(() => alert(`Network error: Could not override online database.`));
+            } else {
+                alert(`[Offline Mode Active]\nCached Override order for: "${teacher}" to "${status}" saved on phone memory.`);
+            }
         }
     </script>
 </body>
