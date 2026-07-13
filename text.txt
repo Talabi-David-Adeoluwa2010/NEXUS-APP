@@ -20,7 +20,7 @@ except ImportError:
 # =========================================================================
 # CENTRAL HARDWARE CONFIGURATION TIER
 # =========================================================================
-API_BASE_URL = "http://YOUR_SERVER_IP_OR_URL:5000" # Replace with your live Flask backend cloud address
+API_BASE_URL = "https://talabi-david-adeoluwa2010.github.io/NEXUS-APP/" # Replace with your live Flask backend cloud address
 
 class NexusLearnUnifiedApp:
     def __init__(self, root):
