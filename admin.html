@@ -162,9 +162,9 @@
             <table class="live-table">
                 <thead>
                     <tr>
-                        <th>User ID</th>
-                        <th>Duration</th>
-                        <th>Current Action Status</th>
+                        <th>Node ID</th>
+                        <th>Activity Summary</th>
+                        <th>Event Time</th>
                     </tr>
                 </thead>
                 <tbody id="live-user-rows">
@@ -209,11 +209,9 @@
     </div>
 
     <script>
-        // Overridden to run securely inside static web host browsers without network errors
-        const API_BASE = ""; 
-        let authHeaders = {
-            "Content-Type": "application/json"
-        };
+        // Directly maps requests across localhost connections
+        const API_BASE = "http://127.0.0.1:5000"; 
+        let logInterval = null;
 
         function handleAdminAuth() {
             const user = document.getElementById('root-user').value.trim();
@@ -223,8 +221,9 @@
                 document.getElementById('admin-login-view').classList.add('hidden');
                 document.getElementById('admin-dashboard-view').classList.remove('hidden');
                 
-                // Render initial client data arrays
                 refreshLiveMetrics();
+                // Start a continuous loop targeting background pipeline updates every 3 seconds
+                logInterval = setInterval(refreshLiveMetrics, 3000);
             } else {
                 alert("ACCESS VIOLATION: Unauthorized master entry attempt.");
             }
@@ -233,22 +232,29 @@
         function refreshLiveMetrics() {
             const tbody = document.getElementById('live-user-rows');
             
-            // Displays your core diagnostic profile directly on your live phone screen
-            tbody.innerHTML = `
-                <tr>
-                    <td><strong>David (Master Admin)</strong></td>
-                    <td>00:00:00</td>
-                    <td style="color: #00FF64; font-weight: bold;">
-                        System Hub Securely Loaded On GitHub Pages
-                    </td>
-                </tr>
-            `;
+            fetch(`${API_BASE}/api/admin/logs`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #9CA3AF;">No live operational events tracked yet.</td></tr>`;
+                        return;
+                    }
+                    tbody.innerHTML = data.map(log => `
+                        <tr>
+                            <td><strong>${log.session_id}</strong></td>
+                            <td style="color: #FCF6BA;">${log.message}</td>
+                            <td style="color: #9CA3AF; font-size:11px;">${log.timestamp.split(' ')[1]}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(err => {
+                    console.log("Sync delay or server connection pending...");
+                });
         }
 
         function generateSecurePIN() {
             const durationHours = document.getElementById('pin-duration').value;
             
-            // Generates 4 secure numbers followed by 2 letters locally
             const digits = Math.floor(1000 + Math.random() * 9000);
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
             let letters = '';
@@ -257,15 +263,43 @@
             }
             const localSecurePin = digits + letters;
             
-            document.getElementById('pin-output').innerText = localSecurePin;
-            alert(`Token Created Locally!\nPIN: ${localSecurePin}\nDuration Parameter Configured: ${durationHours} Hours.`);
+            // Post authorization token records to backend SQL arrays directly
+            fetch(`${API_BASE}/api/admin/generate-pin`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin: localSecurePin, hours: durationHours })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "SUCCESS") {
+                    document.getElementById('pin-output').innerText = localSecurePin;
+                    alert(`Token Authorized and Saved Live!\nPIN: ${localSecurePin}\nDuration: ${durationHours} Hours.`);
+                } else {
+                    alert(`Engine response code error: ${data.message}`);
+                }
+            })
+            .catch(err => alert("Network array error: Check if Python app backend server is open."));
         }
 
         function overrideAccount(status) {
             const teacher = document.getElementById('target-teacher').value.trim();
             if(!teacher) { alert("ERROR: Enter target username to change access."); return; }
             
-            alert(`Account configuration updated locally!\nTarget Educator: ${teacher}\nAccess Override State Level: ${status}`);
+            fetch(`${API_BASE}/api/admin/override`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: teacher, status: status })
+            })
+            .then(res => {
+                if(!res.ok) {
+                    throw new Error("Target identity matching parameter fault.");
+                }
+                return res.json();
+            })
+            .then(data => {
+                alert(`Account configuration updated live!\nTarget Educator: ${teacher}\nAccess State: ${status}`);
+            })
+            .catch(err => alert("ERROR: Username profile was not discovered inside system arrays."));
         }
     </script>
 </body>
