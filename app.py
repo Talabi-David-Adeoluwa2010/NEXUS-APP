@@ -3,8 +3,7 @@ import random
 import string
 import sqlite3
 import threading
-import tkinter as tk
-from tkinter import messagebox, ttk
+
 from flask import Flask, jsonify, request, render_template, send_from_directory, redirect, url_for
 from flask_cors import CORS
 import os
