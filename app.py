@@ -1,0 +1,636 @@
+import datetime
+import random
+import string
+import sqlite3
+import threading
+import tkinter as tk
+from tkinter import messagebox, ttk
+from flask import Flask, jsonify, request, render_template, send_from_directory, redirect, url_for
+from flask_cors import CORS
+import os
+
+# Initialize Flask with absolute template and static bindings
+server = Flask(__name__, template_folder='templates', static_folder='static')
+CORS(server)
+server.secret_key = "nexuslearn_secret_key_for_session"
+
+DB_FILE = "nexuslearn_system.db"
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_FILE, timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
+
+# Database table additions
+def init_app_tables():
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Storage for generated classes
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS active_classes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_name TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                invitation_code TEXT UNIQUE NOT NULL,
+                teacher_username TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Storage for teacher notepad content
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teacher_notes (
+                teacher_username TEXT PRIMARY KEY,
+                notes_content TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+# =====================================================================
+# FLASK WEB INTERFACE ROUTING
+# =====================================================================
+
+@server.route('/', methods=['GET'])
+def serve_main_hub():
+    """Serves the integrated template which starts on the 30-second loader."""
+    return render_template('index.html')
+
+@server.route('/signin', methods=['POST'])
+def signin():
+    role = request.form.get('role')
+    
+    if role == 'student':
+        student_name = request.form.get('student_name', '').strip()
+        invitation_code = request.form.get('invitation_code', '').strip()
+        
+        if not student_name or not invitation_code:
+            return redirect(url_for('serve_main_hub', error="Please fill in all student credentials fields.", role="student"))
+        
+        # Verify the invitation code exists
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM active_classes WHERE invitation_code = ?", (invitation_code,))
+            found_class = cursor.fetchone()
+            if not found_class:
+                return redirect(url_for('serve_main_hub', error="Invalid 14-character invitation code.", role="student"))
+                
+        return redirect(url_for('student_home', name=student_name, code=invitation_code))
+        
+    elif role == 'teacher':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        teacher_pin = request.form.get('teacher_pin', '').strip()
+        
+        if not username or not password or not teacher_pin:
+            return redirect(url_for('serve_main_hub', error="Please fill in all teacher authorization fields.", role="teacher"))
+        
+        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM teachers WHERE auth_pin = ?", (teacher_pin,))
+            teacher = cursor.fetchone()
+            
+            if not teacher:
+                return redirect(url_for('serve_main_hub', error="Invalid administrative authentication PIN.", role="teacher"))
+            if teacher['payment_status'] != 'Paid':
+                return redirect(url_for('serve_main_hub', error="Profile subscription link inactive. Payment check failed.", role="teacher"))
+            if now_str > teacher['expiration_timestamp']:
+                return redirect(url_for('serve_main_hub', error="Token operational lifespans expired.", role="teacher"))
+        
+        return redirect(url_for('teacher_home', username=username))
+
+    return redirect(url_for('serve_main_hub'))
+
+
+# =====================================================================
+# API ENDPOINTS FOR TEACHER ACTIVITIES
+# =====================================================================
+
+@server.route('/api/teacher/save-notes', methods=['POST'])
+def save_notes():
+    data = request.json or {}
+    username = data.get('username')
+    content = data.get('notes', '')
+    if not username:
+        return jsonify({"status": "error", "message": "Missing teacher credentials"}), 400
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO teacher_notes (teacher_username, notes_content, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(teacher_username) DO UPDATE SET
+                notes_content = excluded.notes_content,
+                updated_at = CURRENT_TIMESTAMP
+        """, (username, content))
+        conn.commit()
+    return jsonify({"status": "success", "message": "Notes saved!"})
+
+@server.route('/api/teacher/get-notes', methods=['GET'])
+def get_notes():
+    username = request.args.get('username')
+    if not username:
+         return jsonify({"status": "error", "message": "Missing parameter"}), 400
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT notes_content FROM teacher_notes WHERE teacher_username = ?", (username,))
+        row = cursor.fetchone()
+        notes = row[0] if row else "Welcome to your scratchpad! Write details here..."
+    return jsonify({"status": "success", "notes": notes})
+
+@server.route('/api/teacher/create-class', methods=['POST'])
+def create_class():
+    data = request.json or {}
+    class_name = data.get('className')
+    duration = data.get('duration')
+    username = data.get('username')
+    
+    if not class_name or not duration or not username:
+         return jsonify({"status": "error", "message": "Missing required fields"}), 400
+         
+    # Generate 14-character alphanumeric code
+    raw_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=14))
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO active_classes (class_name, duration, invitation_code, teacher_username)
+            VALUES (?, ?, ?, ?)
+        """, (class_name, int(duration), raw_code, username))
+        conn.commit()
+        
+    return jsonify({"status": "success", "code": raw_code})
+
+
+# =====================================================================
+# SYSTEM HOMEPAGES (STUDENT & TEACHER PANELS)
+# =====================================================================
+
+@server.route('/student-home', methods=['GET', 'POST'])
+def student_home():
+    # Safely handle either GET or POST data passing
+    if request.method == 'POST':
+        student_name = request.form.get('student_name', 'Student')
+        invitation_code = request.form.get('invitation_code', '')
+    else:
+        student_name = request.args.get('name', 'Student')
+        invitation_code = request.args.get('code', '')
+    
+    class_title = "Active Workspace"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT class_name FROM active_classes WHERE invitation_code = ?", (invitation_code,))
+        row = cursor.fetchone()
+        if row:
+            class_title = row[0]
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Student Portal - NexusLearn</title>
+        <style>
+            body {{ background-color: #050811; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }}
+            .card {{ text-align: center; border: 1px solid #D4AF37; padding: 40px; border-radius: 12px; background: #0F1626; max-width: 550px; width: 90%; box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); }}
+            h1 {{ color: #D4AF37; margin: 0 0 10px 0; }}
+            .code-badge {{ display: inline-block; background: #1C2541; padding: 5px 15px; border-radius: 20px; color: #5BC0BE; font-weight: bold; margin-bottom: 20px; }}
+            p {{ color: #9CA3AF; line-height: 1.6; }}
+            .panel {{ margin-top: 20px; border-top: 1px solid #1C2541; padding-top: 20px; text-align: left; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>Welcome back, {student_name}!</h1>
+            <div class="code-badge">Joined Class: {class_title} ({invitation_code})</div>
+            <p>You have successfully logged in as a <strong>Student</strong> to the NexusLearn workspace.</p>
+            
+            <div class="panel">
+                <h3 style="color:#D4AF37; margin-top:0;">Shared Workspace Assets</h3>
+                <p style="font-size:0.9rem;">Waiting for the teacher to push lesson notes, file attachments, or initialize streaming activities...</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+@server.route('/teacher-home', methods=['GET', 'POST'])
+def teacher_home():
+    # Safely handle either GET or POST data passing
+    if request.method == 'POST':
+        teacher_name = request.form.get('username', 'Teacher')
+    else:
+        teacher_name = request.args.get('username', 'Teacher')
+        
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Teacher Portal - NexusLearn</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-[#050811] text-gray-100 font-sans min-h-screen">
+        <header class="bg-[#0F1626] border-b border-[#D4AF37]/30 p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold text-[#D4AF37] tracking-wider uppercase">NexusLearn Teacher Workspace</h1>
+                <span class="text-sm text-gray-400">Logged in as: <strong class="text-white">{teacher_name}</strong></span>
+            </div>
+        </header>
+
+        <main class="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="space-y-6 lg:col-span-1">
+                <div class="bg-[#0F1626] p-6 rounded-2xl border border-gray-800 shadow-lg">
+                    
+                    <div class="bg-[#151D30] p-4 rounded-xl border border-gray-800 mb-6">
+                        <h3 class="text-lg font-semibold mb-2 text-[#D4AF37]">Audio Player</h3>
+                        <p id="audio-status" class="text-xs text-gray-400 mb-3">No track imported</p>
+                        <input type="file" id="audio-file" accept="audio/*" class="hidden" onchange="loadAudioTrack(event)">
+                        <button onclick="document.getElementById('audio-file').click()" class="w-full bg-[#1C2541] hover:bg-[#253254] text-white text-sm py-2 px-4 rounded-lg transition mb-3">
+                            Import Song
+                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="controlAudio('play')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 rounded-lg font-bold">▶ Play</button>
+                            <button onclick="controlAudio('pause')" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-xs py-2 rounded-lg font-bold">⏸ Pause</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#151D30] p-4 rounded-xl border border-gray-800 mb-6">
+                        <h3 class="text-lg font-semibold mb-2 text-[#D4AF37]">Import Files / Notes</h3>
+                        <p id="file-status" class="text-xs text-gray-400 mb-3">No resources imported</p>
+                        <input type="file" id="resource-file" class="hidden" onchange="loadResourceFile(event)">
+                        <button onclick="document.getElementById('resource-file').click()" class="w-full bg-[#1C2541] hover:bg-[#253254] text-white text-sm py-2 px-4 rounded-lg transition mb-2">
+                            Import File / Image
+                        </button>
+                        <button onclick="sendResourceToClass()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-2 px-4 rounded-lg transition">
+                            📤 Send to Students
+                        </button>
+                    </div>
+
+                    <div class="bg-[#151D30] p-4 rounded-xl border border-gray-800">
+                        <h3 class="text-lg font-semibold mb-3 text-[#D4AF37]">Classroom Manager</h3>
+                        <button onclick="openClassModal()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition">
+                            🔨 Create Class
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 flex flex-col">
+                <div class="bg-[#0F1626] p-6 rounded-2xl border border-gray-800 shadow-lg flex-1 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-purple-400">Dynamic Notepad Workspace</h2>
+                        <span class="text-xs text-gray-400">Drag bottom right to scale</span>
+                    </div>
+                    <textarea id="notepad" class="w-full flex-1 min-h-[350px] p-4 bg-[#050811] text-gray-100 rounded-xl border border-gray-800 focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono resize-y" placeholder="Draft your notes, activities, or classes here..."></textarea>
+                    
+                    <div class="flex justify-between items-center mt-4">
+                        <button onclick="saveTeacherNotes()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-semibold text-sm transition">
+                            Save Draft
+                        </button>
+                        <button onclick="document.getElementById('notepad').value = ''" class="text-xs text-gray-500 hover:text-red-400 transition">
+                            Clear Canvas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <div id="class-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+            <div class="bg-[#0F1626] border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+                <button onclick="closeClassModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+                <h3 class="text-xl font-bold mb-4 text-[#D4AF37] text-center">Setup New Class</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Class Name</label>
+                        <input type="text" id="modal-class-name" class="w-full p-2.5 rounded-lg bg-[#050811] border border-gray-800 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" placeholder="e.g. Physics Core">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Duration (Minutes)</label>
+                        <input type="number" id="modal-duration" class="w-full p-2.5 rounded-lg bg-[#050811] border border-gray-800 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" placeholder="e.g. 45">
+                    </div>
+                    <button onclick="triggerClassCreation()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition mt-4">
+                        Generate 14-Char Access Code
+                    </button>
+                </div>
+
+                <div id="code-result" class="hidden mt-6 p-4 bg-[#050811] rounded-xl text-center border border-dashed border-[#D4AF37]/50">
+                    <span class="text-xs text-gray-500 uppercase tracking-wider block">Student Invitation Code</span>
+                    <span id="generated-code" class="text-xl font-mono font-bold text-yellow-400 select-all block my-2"></span>
+                    <p class="text-[11px] text-gray-400">Share this unique 14-character code with your students.</p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const teacherUser = "{teacher_name}";
+            let loadedAudio = "";
+            let loadedResource = "";
+
+            // Audio Player Controls
+            function loadAudioTrack(e) {{
+                if(e.target.files.length > 0) {{
+                    loadedAudio = e.target.files[0].name;
+                    document.getElementById('audio-status').innerText = "Loaded: " + loadedAudio;
+                }}
+            }}
+            function controlAudio(action) {{
+                if(!loadedAudio) {{ alert("Please import an audio file first."); return; }}
+                alert(action.toUpperCase() + ": " + loadedAudio);
+            }}
+
+            // File Handlers
+            function loadResourceFile(e) {{
+                if(e.target.files.length > 0) {{
+                    loadedResource = e.target.files[0].name;
+                    document.getElementById('file-status').innerText = "Ready: " + loadedResource;
+                }}
+            }}
+            function sendResourceToClass() {{
+                if(!loadedResource) {{ alert("No resource has been imported to send."); return; }}
+                alert(`Pushed "${{loadedResource}}" to student workspace stream.`);
+            }}
+
+            // Load saved notes on entry
+            window.onload = function() {{
+                fetch(`/api/teacher/get-notes?username=${{encodeURIComponent(teacherUser)}}`)
+                .then(r => r.json())
+                .then(d => {{
+                    if(d.status === 'success') {{
+                        document.getElementById('notepad').value = d.notes;
+                    }}
+                }});
+            }};
+
+            // Save Notepad Notes
+            function saveTeacherNotes() {{
+                const content = document.getElementById('notepad').value;
+                fetch('/api/teacher/save-notes', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ username: teacherUser, notes: content }})
+                }})
+                .then(r => r.json())
+                .then(d => {{
+                    if(d.status === 'success') alert("Draft saved successfully!");
+                }});
+            }}
+
+            // Modal Toggles
+            function openClassModal() {{
+                document.getElementById('class-modal').classList.remove('hidden');
+            }}
+            function closeClassModal() {{
+                document.getElementById('class-modal').classList.add('hidden');
+                document.getElementById('code-result').classList.add('hidden');
+                document.getElementById('modal-class-name').value = "";
+                document.getElementById('modal-duration').value = "";
+            }}
+
+            // Create Class and Generate Code
+            function triggerClassCreation() {{
+                const name = document.getElementById('modal-class-name').value.trim();
+                const duration = document.getElementById('modal-duration').value.trim();
+                if(!name || !duration) {{ alert("Please fill in class settings fields."); return; }}
+
+                fetch('/api/teacher/create-class', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ className: name, duration: duration, username: teacherUser }})
+                }})
+                .then(r => r.json())
+                .then(d => {{
+                    if(d.status === 'success') {{
+                        document.getElementById('generated-code').innerText = d.code;
+                        document.getElementById('code-result').classList.remove('hidden');
+                    }} else {{
+                        alert(d.message);
+                    }}
+                }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
+
+@server.route('/static/<path:path>')
+def send_static_assets(path):
+    return send_from_directory('static', path)
+
+@server.route('/api/client/heartbeat', methods=['POST'])
+def handle_web_heartbeat():
+    data = request.json or {}
+    username = data.get("username", "Unknown User")
+    role = data.get("role", "Student")
+    action = data.get("action", "Idling")
+    session_id = data.get("session_id", "GLOBAL_NODE")
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        log_msg = f"SESSION_START:{role} | {username} is currently {action}"
+        cursor.execute(
+            "INSERT INTO chat_logs (session_id, message, timestamp) VALUES (?, ?, ?)",
+            (session_id, log_msg, now_str)
+        )
+        conn.commit()
+    return jsonify({"status": "Core synchronized", "timestamp": now_str})
+
+# =====================================================================
+# TKINTER COMMAND CONSOLE ENGINE
+# =====================================================================
+
+class NexusLearnAdminConsole:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("NexusLearn // Master Administrative Intelligence")
+        self.root.geometry("1100x650")
+        self.root.configure(bg="#0B132B")
+        
+        self.init_admin_database()
+        init_app_tables()  # Initialize the extra tables needed for features
+        
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+        self.style.configure("Treeview", bg="#1C2541", fg="#FFFFFF", fieldbackground="#1C2541", rowheight=25)
+        self.style.map("Treeview", background=[('selected', '#5BC0BE')])
+        
+        self.build_layout()
+        self.refresh_all_monitors()
+        self.auto_refresh_loop()
+
+    def init_admin_database(self):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS teachers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    auth_pin TEXT UNIQUE NOT NULL,
+                    payment_status TEXT DEFAULT 'Unpaid',
+                    expiration_timestamp DATETIME
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chat_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    message TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+
+    def generate_unique_secure_pin(self):
+        while True:
+            digits = "".join(random.choices(string.digits, k=4))
+            letters = "".join(random.choices(string.ascii_uppercase, k=2))
+            pin = digits + letters
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM teachers WHERE auth_pin = ?", (pin,))
+                if not cursor.fetchone():
+                    return pin
+
+    def register_and_expire_pin(self):
+        username = self.ent_user.get().strip()
+        password = self.ent_pass.get().strip()
+        payment = self.combo_payment.get()
+        hours_valid = self.ent_expiry.get().strip()
+        
+        if not username or not password or not hours_valid:
+            messagebox.showerror("Error", "All parameter windows must be assigned.")
+            return
+        try:
+            hours = int(hours_valid)
+        except ValueError:
+            messagebox.showerror("Error", "Expiry value must be an integer (Hours).")
+            return
+            
+        auth_pin = self.generate_unique_secure_pin()
+        expiration_time = datetime.datetime.now() + datetime.timedelta(hours=hours)
+        expiration_str = expiration_time.strftime('%Y-%m-%d %H:%M:%S')
+        
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO teachers (username, password, auth_pin, payment_status, expiration_timestamp) VALUES (?, ?, ?, ?, ?)",
+                    (username, password, auth_pin, payment, expiration_str)
+                )
+                conn.commit()
+            messagebox.showinfo("PIN Live", f"Authorization Node Registered!\n\nPIN: {auth_pin}\nExpires: {expiration_str}")
+            self.ent_user.delete(0, tk.END)
+            self.ent_pass.delete(0, tk.END)
+            self.refresh_all_monitors()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Registry Collision", "Target account handle already exists inside local ledger.")
+
+    def refresh_all_monitors(self):
+        for item in self.tree_accounts.get_children():
+            self.tree_accounts.delete(item)
+            
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT username, auth_pin, payment_status, expiration_timestamp FROM teachers")
+            for row in cursor.fetchall():
+                self.tree_accounts.insert("", tk.END, values=row)
+                
+        for item in self.tree_live.get_children():
+            self.tree_live.delete(item)
+            
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT session_id, message, timestamp FROM chat_logs ORDER BY id DESC LIMIT 50")
+            for row in cursor.fetchall():
+                self.tree_live.insert("", tk.END, values=(row[0], row[1], row[2]))
+
+    def auto_refresh_loop(self):
+        try:
+            self.refresh_all_monitors()
+        except Exception:
+            pass
+        self.root.after(3000, self.auto_refresh_loop)
+
+    def build_layout(self):
+        header = tk.Frame(self.root, bg="#1C2541", height=60)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        
+        tk.Label(header, text="NEXUSLEARN SYSTEM MANAGEMENT HUB", font=("Helvetica", 14, "bold"), bg="#1C2541", fg="#5BC0BE").pack(side=tk.LEFT, padx=20)
+        tk.Label(header, text="Producer Access Layer", font=("Helvetica", 10, "italic"), bg="#1C2541", fg="#6C757D").pack(side=tk.RIGHT, padx=20)
+
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        tab1 = tk.Frame(notebook, bg="#0B132B")
+        notebook.add(tab1, text=" Credentials & Account Ledgers ")
+        
+        form_p = tk.LabelFrame(tab1, text=" Authorize New Teacher Profile ", bg="#1C2541", fg="#5BC0BE", font=("Helvetica", 10, "bold"))
+        form_p.pack(fill="x", padx=10, pady=10)
+        
+        tk.Label(form_p, text="Account ID:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.ent_user = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_user.grid(row=0, column=1, padx=5, pady=5)
+        
+        tk.Label(form_p, text="System Key:", bg="#1C2541", fg="#FFFFFF").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.ent_pass = tk.Entry(form_p, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_pass.grid(row=0, column=3, padx=5, pady=5)
+        
+        tk.Label(form_p, text="Payment Status:", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.combo_payment = ttk.Combobox(form_p, values=["Paid", "Unpaid"], state="readonly", width=12)
+        self.combo_payment.current(1)
+        self.combo_payment.grid(row=1, column=1, padx=5, pady=5)
+        
+        tk.Label(form_p, text="Lifespan (Hours):", bg="#1C2541", fg="#FFFFFF").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        self.ent_expiry = tk.Entry(form_p, width=10, bg="#0B132B", fg="#FFFFFF", insertbackground="white")
+        self.ent_expiry.insert(0, "720") 
+        self.ent_expiry.grid(row=1, column=3, padx=5, pady=5)
+        
+        btn_commit = tk.Button(form_p, text="Commit & Generate PIN", command=self.register_and_expire_pin, bg="#5BC0BE", fg="#0B132B", font=("Helvetica", 10, "bold"))
+        btn_commit.grid(row=0, column=4, rowspan=2, padx=20, pady=5)
+        
+        self.tree_accounts = ttk.Treeview(tab1, columns=("u", "p", "f", "e"), show="headings")
+        self.tree_accounts.heading("u", text="Educator Identity Handle")
+        self.tree_accounts.heading("p", text="Permanent System PIN")
+        self.tree_accounts.heading("f", text="Financial Log State")
+        self.tree_accounts.heading("e", text="Expiration Deadline Bounds")
+        self.tree_accounts.pack(fill="both", expand=True, padx=10, pady=5)
+
+        tab2 = tk.Frame(notebook, bg="#0B132B")
+        notebook.add(tab2, text=" Live Operations Stream ")
+        
+        tk.Label(tab2, text="Real-Time Network Activity Feed", font=("Helvetica", 11, "bold"), bg="#0B132B", fg="#FFFFFF").pack(anchor="w", padx=10, pady=5)
+        
+        self.tree_live = ttk.Treeview(tab2, columns=("sid", "title", "t"), show="headings")
+        self.tree_live.heading("sid", text="Session Identifier")
+        self.tree_live.heading("title", text="Live User Activity Description")
+        self.tree_live.heading("t", text="Log Event Timestamp")
+        self.tree_live.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        btn_refresh = tk.Button(tab2, text="Force Global Data Re-Index", command=self.refresh_all_monitors, bg="#1C2541", fg="#5BC0BE")
+        btn_refresh.pack(pady=5)
+
+        footer = tk.Frame(self.root, bg="#0B132B")
+        footer.pack(fill="x", side=tk.BOTTOM, pady=5)
+        tk.Label(footer, text="Produced / Founded by Talabi David Adeoluwa", font=("Helvetica", 9, "italic"), bg="#0B132B", fg="#6C757D").pack(side=tk.LEFT, padx=15)
+
+def start_server():
+    if not os.path.exists('static'):
+        os.makedirs('static')
+    server.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
+
+if __name__ == "__main__":
+    threading.Thread(target=start_server, daemon=True).start()
+    
+    root = tk.Tk()
+    app = NexusLearnAdminConsole(root)
+    root.mainloop()
